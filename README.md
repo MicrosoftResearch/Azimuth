@@ -1,5 +1,6 @@
-# WarpedLMM
-[![Travis](https://img.shields.io/travis/PMBio/warpedLMM.svg)](https://travis-ci.org/PMBio/warpedLMM)  [![PyPI](https://img.shields.io/pypi/v/warpedlmm.svg)](https://pypi.python.org/pypi/WarpedLMM) [![PyPI](https://img.shields.io/pypi/l/WarpedLMM.svg)]()
+# Azimuth 
+
+## Official project page: [**http://research.microsoft.com/en-us/projects/azimuth/**](#)
 
 #### Machine Learning-Based Predictive Modelling of CRISPR/Cas9 guide efficiency.
 
@@ -9,10 +10,8 @@ The CRISPR/Cas9 system provides state-of-the art genome editing capabilities. Ho
 
 Please cite this paper if using our predictive model:
 
-John G. Doench*, Nicolo Fusi*, Meagan Sullender*, Mudra Hegde*, Emma W. Vaimberg*, Katherine F. Donovan, Ian Smith, Zuzana Tothova, Craig Wilen , Robert 
-Orchard, Herbert W. Virgin, Jennifer Listgarten*, David E. Root.
-
-[**Optimized sgRNA design to maximize activity and minimize off-target effects for genetic screens with CRISPR-Cas9 (In press)**](#) . *Nature Biotechnology *, 2015 (in press)
+_*John G. Doench*_, _*Nicolo Fusi*_, _Meagan Sullender_, _Mudra Hegde_, _Emma W. Vaimberg_, Katherine F. Donovan, Ian Smith, Zuzana Tothova, Craig Wilen , Robert Orchard, Herbert W. Virgin, _*Jennifer Listgarten*_, *David E. Root*.
+[**Optimized sgRNA design to maximize activity and minimize off-target effects for genetic screens with CRISPR-Cas9 (In press)**](#). *Nature Biotechnology *, 2015 (in press). (_equal contributions_, *corresponding author*)
 
 
 #### Installation (python package)
