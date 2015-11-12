@@ -26,15 +26,20 @@ pip install azimuth
 
 Alternatively, if you want access to the code, you can clone this repository.
 
+**If you prefer not to install python packages or download any code, you can use our model via Excel or as a web service.** Instructions on how to do so are (HERE)[http://research.microsoft.com/en-us/projects/azimuth/] 
 
 #### Getting started
 
-To run Azimuth, open a terminal and execute:
+From python, you can get predictions from our model by running:
 
-```shell
-pip install azimuth 
+```python
+import azimuth.model_comparison
+
+azimuth.model_comparison.predict(GUIDE, PERCENT_PEPTIDE, CUT_POSITION), model_file=os.path.join(AZIMUTH_FOLDER, 'V3_model_full.pickle'))[0]
+
 ```
-
+where GUIDE, PERCENT_PEPTIDE and CUT_POSITION are numpy arrays.
+ 
 #### Contacting us 
 
 You can submit bug reports using the github issue tracker. 
