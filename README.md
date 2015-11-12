@@ -31,7 +31,7 @@ Alternatively, if you want access to the code, you can clone this repository.
 To run Azimuth, open a terminal and execute:
 
 ```shell
-pip install azimuth
+pip install azimuth 
 ```
 
 #### Contacting us 
