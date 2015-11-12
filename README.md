@@ -10,7 +10,7 @@ The CRISPR/Cas9 system provides state-of-the art genome editing capabilities. Ho
 
 Please cite this paper if using our predictive model:
 
-**_John G. Doench_**, **_Nicolo Fusi_**, _Meagan Sullender_, _Mudra Hegde_, _Emma W. Vaimberg_, Katherine F. Donovan, Ian Smith, Zuzana Tothova, Craig Wilen , Robert Orchard, Herbert W. Virgin, **_Jennifer Listgarten_**, **David E. Root**.
+**John G. Doench**\*, **_Nicolo Fusi_**, _Meagan Sullender_, _Mudra Hegde_, _Emma W. Vaimberg_, Katherine F. Donovan, Ian Smith, Zuzana Tothova, Craig Wilen , Robert Orchard, Herbert W. Virgin, **_Jennifer Listgarten_**, **David E. Root**.
 
 [**Optimized sgRNA design to maximize activity and minimize off-target effects for genetic screens with CRISPR-Cas9**](#). *Nature Biotechnology*, 2015 (in press). (_equal contributions_, **corresponding author**)
 
