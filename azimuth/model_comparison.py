@@ -1,0 +1,642 @@
+import azimuth.predict as pd
+import copy
+import os
+import numpy as np
+import azimuth.util
+import shutil
+import pickle
+import pylab as plt
+import pandas
+import azimuth.local_multiprocessing
+import azimuth.load_data
+import azimuth.features.featurization as feat
+
+def check_feature_set_dims(feature_sets):
+    F2 = None
+    for set in feature_sets.keys():
+        F = feature_sets[set].shape[0]
+        if F2 is None: F = F2
+        assert F == F2, "not same # individuals for feature %s" % set
+
+    assert feature_sets !={}, "features are empty, check learn_options"
+
+
+def set_target(learn_options, classification):
+    assert 'target_name' not in learn_options.keys() or learn_options['target_name'] is not None, "changed it to be automatically set here"
+    if not classification:
+        learn_options["target_name"] = learn_options['rank-transformed target name']
+        learn_options["training_metric"] = 'spearmanr'
+        learn_options['ground_truth_label'] = learn_options['target_name']
+    else:
+        learn_options["target_name"] = learn_options['binary target name']
+        learn_options["training_metric"] = 'AUC'
+        learn_options['ground_truth_label'] = learn_options['binary target name']
+
+    if learn_options["V"]==3:
+        assert learn_options['target_name']=='score_drug_gene_rank' or learn_options['target_name']=='score_drug_gene_threshold', "cannot use raw scores when mergind data"
+        assert learn_options["ground_truth_label"]=='score_drug_gene_rank' or learn_options["ground_truth_label"]=='score_drug_gene_threshold', "cannot use raw scores when mergind data"
+
+    return learn_options
+
+def GP_setup(learn_options, likelihood='gaussian', degree=3):
+    learn_options["method"] = "GPy"
+    learn_options['kernel degree'] = degree
+
+    if likelihood == 'warped':
+        learn_options['warpedGP'] = True
+    else:
+        learn_options['warpedGP'] = False
+    learn_options = set_target(learn_options, classification=False)
+
+    return learn_options
+
+def SVC_setup(learn_options, likelihood='gaussian', degree=3):
+    learn_options["method"] = "SVC"
+    learn_options = set_target(learn_options, classification=True)
+
+    return learn_options
+
+def L1_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options["method"] = "linreg"
+    learn_options["penalty"] = "L1"
+    learn_options["feature_select"] = False
+    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    learn_options["loss"] = "squared"
+
+    return learn_options
+
+def L2_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options["method"] = "linreg"
+    learn_options["penalty"] = "L2"
+    learn_options["feature_select"] = False
+    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    learn_options["loss"] = "squared"
+
+    return learn_options
+
+def mean_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options['method'] = 'mean'
+    return learn_options
+
+def random_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options['method'] = 'random'
+    return learn_options
+
+def elasticnet_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options["method"] = "linreg"
+    learn_options["penalty"] = "EN"
+    learn_options["feature_select"] = False
+    learn_options["loss"] = "squared"
+    learn_options["alpha"] = np.array([1e-5*pow(2,x) for x in range(0,30)])
+    return learn_options
+
+def DNN_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options['method'] = 'DNN'
+    learn_options['DNN target variable'] = 'score'#'score_drug_gene_quantized'
+    # learn_options['DNN architecture'] = (119, 10, 10, 10, 2)
+    return learn_options
+
+def RF_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options['method'] = 'RandomForestRegressor'
+    return learn_options
+
+def doench_setup(learn_options):
+    learn_options = set_target(learn_options, classification=True)
+    learn_options['method'] = 'doench'
+    return learn_options
+
+def sgrna_from_doench_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options['method'] = 'sgrna_from_doench'
+    return learn_options
+
+def linreg_setup(learn_options):
+    learn_options["method"] = "linreg"
+    learn_options["penalty"] = "L1"
+    learn_options["feature_select"] = False
+    learn_options["alpha"] = np.array([0.0])
+    learn_options["loss"] = "squared"
+    learn_options = set_target(learn_options, classification=False)
+
+    return learn_options
+
+def logregL1_setup(learn_options):
+    learn_options = set_target(learn_options, classification=True)
+    learn_options["method"] = "logregL1"
+    learn_options["penalty"] = "L1"
+    learn_options["feature_select"] = False
+    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    return learn_options
+
+def LASSOs_ensemble_setup(learn_options):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options["method"] = "lasso_ensemble"
+    learn_options["penalty"] = "L1"
+    learn_options["feature_select"] = False
+    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    learn_options["loss"] = "squared"
+
+    return learn_options
+
+def xu_et_al_setup(learn_options):
+    learn_options = set_target(learn_options, classification=True)
+    learn_options["method"] = "xu_et_al"
+
+    return learn_options
+
+def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate=0.1, CV=False):
+    learn_options = set_target(learn_options, classification=False)
+    learn_options['method'] = "AdaBoostRegressor"
+    learn_options['adaboost_version'] = 'python' # "R" or "python"
+
+    if 'adaboost_loss' not in learn_options.keys():
+        learn_options['adaboost_loss'] = 'ls' # alternatives: "lad", "huber", "quantile", see scikit docs for details
+    if 'adaboost_alpha' not in learn_options.keys():
+        learn_options['adaboost_alpha'] = 0.5 # this parameter is only used by the huber and quantile loss functions.
+
+    if not CV:
+        learn_options['adaboost_CV'] = False
+        learn_options['adaboost_learning_rate'] = learning_rate
+        learn_options['adaboost_n_estimators'] = num_estimators
+        learn_options['adaboost_max_depth'] = max_depth
+    else:
+        learn_options['adaboost_CV'] = True
+        learn_options['adaboost_n_estimators'] = num_estimators
+
+    return learn_options
+
+
+def setup(test=False, order=1, learn_options=None, data_file=None):
+
+    if 'num_proc' not in learn_options.keys():
+        learn_options['num_proc'] = None
+    if 'num_thread_per_proc' not in learn_options.keys():
+        learn_options['num_thread_per_proc'] = None
+
+    num_proc = azimuth.local_multiprocessing.configure(TEST=test, num_proc=learn_options["num_proc"], 
+                                                num_thread_per_proc=learn_options["num_thread_per_proc"])
+    learn_options["num_proc"] = num_proc
+
+    learn_options["order"] = order  # gets used many places in code, not just here
+
+    if "cv" not in learn_options.keys():
+        # if no CV preference is specified, use leave-one-gene-out
+        learn_options["cv"] = "gene"
+
+    if "normalize_features" not in learn_options.keys():
+        # if no CV preference is specified, use leave-one-gene-out
+        learn_options["normalize_features"] = True
+
+    if "weighted" not in learn_options.keys():
+        learn_options['weighted'] = None
+
+    if "all pairs" not in learn_options.keys():
+        learn_options["all pairs"] = False
+
+    if "include_known_pairs" not in learn_options.keys():
+        learn_options["include_known_pairs"] = False
+
+    if "include_gene_guide_feature" not in learn_options.keys():
+        learn_options["include_gene_guide_feature"] = 0 #used as window size, so 0 is none
+
+    #these should default to true to match experiments before they were options:
+    if "gc_features" not in learn_options.keys():
+        learn_options["gc_features"] = True
+    if "nuc_features" not in learn_options.keys():
+        learn_options["nuc_features"] = True
+
+    if 'train_genes' not in learn_options.keys():
+        learn_options["train_genes"] = None
+    if 'test_genes' not in learn_options.keys():
+        learn_options["test_genes"] = None
+
+    if "num_proc" not in learn_options:
+        learn_options["num_proc"] = None
+    if "num_thread_per_proc" not in learn_options:
+        learn_options["num_thread_per_proc"] = None
+
+    if 'seed' not in learn_options:
+        learn_options['seed'] = 1
+
+    if "flipV1target" not in learn_options:
+        learn_options["flipV1target"] = False
+
+    if 'num_genes_remove_train' not in learn_options:
+        learn_options['num_genes_remove_train'] = None
+
+    if "include_microhomology" not in learn_options:
+        learn_options["include_microhomology"] = False
+
+
+    assert "testing_non_binary_target_name" in learn_options.keys(), "need this in order to get metrics, though used to be not needed, so you may newly see this error"
+    if learn_options["testing_non_binary_target_name"] not in ['ranks', 'raw', 'thrs']:
+        raise Exception('learn_otions["testing_non_binary_target_name"] must be in ["ranks", "raw", "thrs"]')
+
+    Xdf, Y, gene_position, target_genes = azimuth.load_data.from_file(data_file, learn_options)
+    learn_options['all_genes'] = target_genes
+
+    if test:
+        learn_options["order"] = 1
+    
+    if 'convert_30mer_to_31mer' in learn_options and learn_options['convert_30mer_to_31mer'] is True:
+        print "WARNING!!! converting 30 mer to 31 mer (and then cutting off first nucleotide to go back to 30mer with a right shift)"
+        for i in range(Xdf.shape[0]):
+            Xdf['30mer'].iloc[i] = azimuth.util.convert_to_thirty_one(Xdf.iloc[i]["30mer"], Xdf.index.values[i][1], Xdf.iloc[i]["Strand"])
+        # to_keep = Xdf['30mer'].isnull() == False
+        # Xdf = Xdf[to_keep]
+        # gene_position = gene_position[to_keep]
+        # Y = Y[to_keep]
+        Xdf["30mer"] = Xdf["30mer"].apply(lambda x: x[1:]) # chop the first nucleotide
+
+    feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position)
+    np.random.seed(learn_options['seed'])
+
+    return Y, feature_sets, target_genes, learn_options, num_proc
+
+
+def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_degrees=[3], 
+               adaboost_learning_rates=[0.1], adaboost_num_estimators=[100], adaboost_max_depths=[3], 
+               adaboost_CV=False, learn_options_set=None, test=False, CV=True):
+
+
+    results = {}
+    assert learn_options_set is not None, "need to specify learn_options_set"
+    all_learn_options = {}
+
+    #shorten so easier to display on graphs
+    feat_models_short = {'L1':"L1", 'L2':"L2", 'elasticnet':"EN", 'linreg':"LR", 
+                         'RandomForest': "RF", 
+                         'AdaBoost':"AB", 'doench': 'doench', 
+                         "logregL1": "logregL1", "sgrna_from_doench":"sgrna_from_doench", 'SVC': 'SVC', 'xu_et_al': 'xu_et_al'}
+
+    if not CV:
+        print "Received option CV=False, so I'm training using all of the data"
+        assert len(learn_options_set.keys()) == 1, "when CV is False, only 1 set of learn options is allowed"
+        assert len(models) == 1, "when CV is False, only 1 model is allowed"
+
+    for learn_options_str in learn_options_set.keys():
+        # these options get augmented in setup
+        partial_learn_opt = learn_options_set[learn_options_str]
+        # if the model requires encoded features
+        for model in models:
+            # models requiring explicit featurization
+            if model in feat_models_short.keys():
+                for order in orders:
+                    print "running %s, order %d for %s" % (model, order, learn_options_str)
+                    Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=order, learn_options=partial_learn_opt) # TODO precompute features for all orders, as this is repated for each model                                        
+
+                    if model == 'L1':
+                        learn_options_model = L1_setup(copy.deepcopy(learn_options))
+                    elif model == 'L2':
+                        learn_options_model = L2_setup(copy.deepcopy(learn_options))
+                    elif model == 'elasticnet':
+                        learn_options_model = elasticnet_setup(copy.deepcopy(learn_options))
+                    elif model == 'linreg':
+                        learn_options_model = linreg_setup(copy.deepcopy(learn_options))
+                    elif model == "logregL1":
+                        learn_options_model = logregL1_setup(copy.deepcopy(learn_options))
+                    elif model == 'RandomForest':
+                        learn_options_model = RF_setup(copy.deepcopy(learn_options))
+                    elif model == 'SVC':
+                        learn_options_model = SVC_setup(copy.deepcopy(learn_options))
+                    elif model == 'doench':
+                        learn_options_model = doench_setup(copy.deepcopy(learn_options))
+                    elif model == 'sgrna_from_doench':
+                        learn_options_model = sgrna_from_doench_setup(copy.deepcopy(learn_options))
+                    elif model == 'xu_et_al':
+                        learn_options_model = xu_et_al_setup(copy.deepcopy(learn_options))
+                    elif model == 'AdaBoost':
+                        for learning_rate in adaboost_learning_rates:
+                            for num_estimators in adaboost_num_estimators:
+                                for max_depth in adaboost_max_depths:
+                                    learn_options_model = adaboost_setup(copy.deepcopy(learn_options), learning_rate=learning_rate, num_estimators=num_estimators, max_depth=max_depth, CV=adaboost_CV)
+                        model_string = feat_models_short[model] + '_or%d_md%d_lr%.2f_n%d_%s' % (learn_options_set[learn_options_str]["order"], max_depth, learning_rate, num_estimators, learn_options_str)
+                    if model != 'AdaBoost':
+                        model_string = feat_models_short[model] + '_ord%d_%s' % (learn_options_set[learn_options_str]["order"], learn_options_str)
+
+                    results[model_string] = pd.cross_validate(Y, feature_sets, learn_options=learn_options_model, TEST=test, CV=CV)
+
+                    all_learn_options[model_string] = learn_options_model
+            # if the model doesn't require explicit featurization
+            else:
+                print "running %s for %s" % (model, learn_options_str)
+                Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=1, learn_options=partial_learn_opt)
+                if model == 'mean':
+                    learn_options_model = mean_setup(copy.deepcopy(learn_options))
+                elif model == 'random':
+                    learn_options_model = random_setup(copy.deepcopy(learn_options))
+                elif model == 'DNN':
+                    learn_options_model = DNN_setup(copy.deepcopy(learn_options))
+                elif model == 'GP':
+                    for likelihood in GP_likelihoods:
+                        for degree in WD_kernel_degrees:
+                            learn_options_model = GP_setup(copy.deepcopy(learn_options), likelihood=likelihood, degree=degree)
+                            model_string = '%s_%s_degree%d_%s' % (model, likelihood, degree, learn_options_str)
+                            results[model_string] = pd.cross_validate(Y, feature_sets, learn_options=learn_options_model,TEST=test, CV=CV)
+
+                else:
+                    raise NotImplementedError("model %s not supported" % model)
+
+                # "GP" already calls pd.cross_validate() and has its own model_string, so skip this.
+                if model != "GP":
+                    model_string = model + '_%s' % learn_options_str
+                    results[model_string] = pd.cross_validate(Y, feature_sets, learn_options=learn_options_model, TEST=test, CV=CV)
+
+            all_learn_options[model_string] = learn_options_model
+
+    return results, all_learn_options
+
+
+def runner(models, learn_options, GP_likelihoods=None, orders=None, WD_kernel_degrees=None, where='local', cluster_user='fusi', cluster='RR1-N13-09-H44', test=False, exp_name = None, **kwargs):
+
+    if where == 'local':
+        results, all_learn_options = run_models(models, orders=orders, GP_likelihoods=GP_likelihoods, learn_options_set=learn_options, WD_kernel_degrees=WD_kernel_degrees, test=test, **kwargs)
+        all_metrics, gene_names = azimuth.util.get_all_metrics(results, learn_options)
+        azimuth.util.plot_all_metrics(all_metrics, gene_names, all_learn_options, save=True)
+
+        # for non-local (i.e. cluster), the comparable code is in cli_run_model.py
+        abspath = os.path.abspath(__file__)
+        dname = os.path.dirname(abspath) + "/../" + "results"
+        if not os.path.exists(dname):
+            os.makedirs(dname)
+            print "Created directory: %s" % str(dname)
+        if exp_name is None:
+            exp_name = results.keys()[0]
+        myfile = dname+'/'+ exp_name + '.pickle'
+        with open(myfile, 'wb') as f:
+            print "writing results to %s" % myfile
+            pickle.dump((results, all_learn_options), f, -1)
+
+        return results, all_learn_options, all_metrics, gene_names
+
+    elif where == 'cluster':
+        import cluster_job
+
+        # create random cluster directory, dump learn options, and create cluster file
+        tempdir, user, clust_filename = cluster_job.create(cluster_user, models, orders, WD_kernel_degrees, GP_likelihoods, exp_name=exp_name, learn_options=learn_options, **kwargs)
+
+        # raw_input("Submit job to HPC and press any key when it's finished: ")
+        # util.plot_cluster_results(directory=tempdir)
+
+        #stdout = tempdir + r"/stdout"
+        #stderr = tempdir + r"/stderr"
+        #if not os.path.exists(stdout): os.makedirs(stdout)
+        #if not os.path.exists(stderr): os.makedirs(stderr)
+
+        return tempdir, clust_filename, user#, stdout, stderr
+
+
+def save_final_model_V3(filename=None, include_position=True):
+    '''
+    run_models(produce_final_model=True) is what saves the model
+    '''
+    test = False
+    assert filename is not None, "need to provide filename to save final model"
+
+    if include_position:
+        learn_options = {"V": 3,               
+                    'train_genes': azimuth.load_data.get_V3_genes(), 
+                    'test_genes': azimuth.load_data.get_V3_genes(),
+                    "testing_non_binary_target_name": 'ranks',
+                    'include_pi_nuc_feat': True,
+                    "gc_features": True,
+                    "nuc_features": True,
+                    "include_gene_position": True,
+                    "include_NGGX_interaction": True,
+                    "include_Tm": True,
+                    "include_strand": False,
+                    "include_gene_feature": False,
+                    "include_gene_guide_feature": 0,
+                    "extra pairs": False,
+                    "weighted": None,
+                    "training_metric": 'spearmanr',
+                    "NDGC_k": 10,
+                    "cv": "gene",                
+                    "include_gene_effect": False,
+                    "include_drug": False,
+                    "include_sgRNAscore": False,
+                    'adaboost_loss' : 'ls', # main "ls", alternatives: "lad", "huber", "quantile", see scikit docs for details
+                    'adaboost_alpha': 0.5, # this parameter is only used by the huber and quantile loss functions.
+                    'normalize_features': False,
+                    }
+    else:
+        learn_options = {"V": 3,               
+            'train_genes': azimuth.load_data.get_V3_genes(), 
+            'test_genes': azimuth.load_data.get_V3_genes(),
+            "testing_non_binary_target_name": 'ranks',
+            'include_pi_nuc_feat': True,
+            "gc_features": True,
+            "nuc_features": True,
+            "include_gene_position": False,
+            "include_NGGX_interaction": True,
+            "include_Tm": True,
+            "include_strand": False,
+            "include_gene_feature": False,
+            "include_gene_guide_feature": 0,
+            "extra pairs": False,
+            "weighted": None,
+            "training_metric": 'spearmanr',
+            "NDGC_k": 10,
+            "cv": "gene",                
+            "include_gene_effect": False,
+            "include_drug": False,
+            "include_sgRNAscore": False,
+            'adaboost_loss' : 'ls', # main "ls", alternatives: "lad", "huber", "quantile", see scikit docs for details
+            'adaboost_alpha': 0.5, # this parameter is only used by the huber and quantile loss functions.
+            'normalize_features': False,
+            }
+
+            
+    learn_options_set = {'final': learn_options}
+    results, all_learn_options = run_models(["AdaBoost"], orders=[2], adaboost_learning_rates=[0.1], 
+                                            adaboost_max_depths=[3], adaboost_num_estimators=[100], 
+                                            adaboost_CV=False, learn_options_set=learn_options_set, 
+                                            test=test, CV=False)
+    model = results.values()[0][3][0]
+        
+    with open(filename, 'wb') as f:
+        pickle.dump((model, learn_options), f, -1)
+    
+    return model
+
+
+def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None):
+    assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
+
+    if model is None:
+        with open(model_file, 'rb') as f:
+            model, learn_options = pickle.load(f)
+    else:
+        model, learn_options = model
+
+    learn_options["V"] = 2
+
+    # Y, feature_sets, target_genes, learn_options, num_proc = setup(test=False, order=2, learn_options=learn_options, data_file=test_filename)
+    # inputs, dim, dimsum, feature_names = pd.concatenate_feature_sets(feature_sets)
+
+    Xdf = pandas.DataFrame(columns=[u'30mer', u'Strand'], data=zip(seq, ['NA' for x in range(len(seq))]))
+    
+    if np.any(percent_peptide != -1):
+        gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(percent_peptide, aa_cut))
+    else:
+        gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(np.ones(seq.shape[0])*-1, np.ones(seq.shape[0])*-1))
+
+    feature_sets = feat.featurize_data(Xdf, learn_options, pandas.DataFrame(), gene_position)
+    inputs, dim, dimsum, feature_names = azimuth.util.concatenate_feature_sets(feature_sets)
+
+    # call to scikit-learn, returns a vector of predicted values
+    return model.predict(inputs)
+
+
+
+def write_results(predictions, file_to_predict):
+    newfile = file_to_predict.replace(".csv", ".pred.csv")
+    data = pandas.read_csv(file_to_predict)
+    data['predictions'] = predictions
+    data.to_csv(newfile)
+    print "wrote results to %s" % newfile
+    return data, newfile
+
+if __name__ == '__main__':
+    if False:
+        test = True
+
+        learn_options = {"gc_features": True,
+                          "nuc_features": True,
+                          "include_pi_nuc_feat": True,
+                          "include_gene_position": True,
+                          "weighted": None,
+                          "include_NGGX_interaction": True,
+                          "include_Tm": True,
+                          "include_strand": False,
+                          "include_gene_feature": True,
+                          "include_gene_guide_feature": 0,
+                          "extra pairs": False,
+                          #"V": 2,
+                          #"V": 1,
+                          "V": 3,
+                          #'train_genes': pd.V1_genes(), 'test_genes': pd.V1_genes(),
+                          #'train_genes': pd.V2_genes(), 'test_genes': pd.V2_genes(),
+                          #'train_genes': pd.V3_genes(), 'test_genes': pd.V3_genes(),
+                          "testing_non_binary_target_name": 'ranks',
+                          'rank-transformed target name' : 'score_drug_gene_rank',
+                          'binary target name' : 'score_drug_gene_threshold',
+                          "NDGC_k": 10,
+                          "cv": "gene",
+                          "include_gene_effect": False,
+                          "include_drug": False,
+                          "include_sgRNAscore": False,
+                          "num_proc" : 9,
+                          "num_thread_per_proc" : 2,
+                          'seed' : 1,
+                          'num_genes_remove_train' : 0,
+                         }
+
+
+        #for seednum in range(100):
+        #for num_remove in range(8):
+        for num_remove in [0]:
+            learn_options_2 = learn_options.copy()
+            learn_options_2['num_genes_remove_train'] = num_remove
+            #learn_options_2['seed'] = learn_options['seed'] * 2**(seednum+1)
+            #learn_options_2['rank-transformed target name'] = 'score_drug_rank'
+            #learn_options_2['binary target name'] = 'score_drug_threshold'
+            #learn_options_2["target_name"] = learn_options_2['binary target name']
+
+             #set of options each with a string name. each one will be run in turn
+
+             #learn_options_set = {'NP_weighted': learn_options_NP}#, 'NP': learn_options_NP}
+             #learn_options_set = {'tmp': learn_options_tmp}
+             #thiskey = 'V1_num_remove_train_%d' % num_remove
+            thiskey = 'try_models'
+            learn_options_set = {thiskey: learn_options_2}
+            print "working on %s" % thiskey
+             #learn_options_set = {'drug_gene': learn_options, 'drug': learn_options_2}
+
+             #results, all_learn_options = run_models(['linreg', 'L1', 'L2'], orders=[1], test=True, target_name='score')
+             # all_learn_options is similar to (and contains all of_ learn_options_set, but has more
+             # entries populated, by the model specification, etc.
+            results, all_learn_options = run_models(["AdaBoost"], orders=[1], adaboost_learning_rates=[0.1], adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, learn_options_set=learn_options_set, test=test, produce_final_model=True)
+             #results, all_learn_options = run_models([ "AdaBoost"], orders=[2], adaboost_learning_rates=[0.1], adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, learn_options_set=learn_options_set, test=test)
+             # all_metrics, gene_names = util.get_all_metrics(results, test_metrics=['AUC', 'spearmanr'], learn_options_set=learn_options_set)
+             # util.plot_all_metrics(all_metrics, gene_names, all_learn_options, save=True)
+             # plt.close('all')
+    else :
+        learn_options = {"V": 3,
+                "train_genes":  azimuth.load_data.get_V1_genes(),
+                "test_genes": azimuth.load_data.get_V1_genes(),
+                "testing_non_binary_target_name": 'ranks',
+                'include_pi_nuc_feat': True,
+                "gc_features": True,
+                "nuc_features": True,            
+                "include_gene_position": True,                    
+                "include_NGGX_interaction": True,
+                "include_Tm": True,
+                "include_strand": False,
+                "include_gene_feature": False,
+                "include_gene_guide_feature": 0,                          
+                "extra pairs": False,
+                "weighted": None,            
+                "training_metric": 'spearmanr',
+                "NDGC_k": 10,
+                "cv": "gene",    
+                "adaboost_loss" : 'ls',
+                "include_gene_effect": False,
+                "include_drug": False,
+                "include_sgRNAscore": False,
+                'num_proc': 1,
+                'num_thread_per_proc': 10,
+                'adaboost_loss' : 'ls', # main "ls", alternatives: "lad", "huber", "quantile", see scikit docs for details
+                'adaboost_alpha': 0.5, # this parameter is only used by the huber and quantile loss functions.
+                'normalize_features': False
+                }
+
+        learn_options_gene = {"V": 3,
+                "train_genes":  azimuth.load_data.get_V3_genes(),
+                "test_genes": azimuth.load_data.get_V3_genes(),
+                "testing_non_binary_target_name": 'ranks',
+                'include_pi_nuc_feat': True,
+                "gc_features": True,
+                "nuc_features": True,            
+                "include_gene_position": True,                    
+                "include_NGGX_interaction": True,
+                "include_Tm": True,
+                "include_strand": False,
+                "include_gene_feature": False,
+                "include_gene_guide_feature": 0,                          
+                "extra pairs": False,
+                "weighted": None,            
+                "training_metric": 'spearmanr',
+                "NDGC_k": 10,
+                "cv": "gene",    
+                "adaboost_loss" : 'ls',
+                "include_gene_effect": False,
+                "include_drug": False,
+                "include_sgRNAscore": False,
+                'num_proc': 1,
+                'num_thread_per_proc': 4,
+                'adaboost_loss' : 'ls', # main "ls", alternatives: "lad", "huber", "quantile", see scikit docs for details
+                'adaboost_alpha': 0.5, # this parameter is only used by the huber and quantile loss functions.
+                'normalize_features': False
+                }
+
+        # save_final_model_V3(filename='azimuth/azure_models/V3_model_full.pickle', include_position=True)
+
+        save_final_model_V3(filename='../saved_models/V3_model_nopos.pickle', include_position=False)
+        # predict('GGGCCGCTGTTGCAGGTGGCGGGTAGGATC', 'sense', 1200, 30.3, model_file='../saved_models/final_model_nicolo.pickle')
+
+        # learn_options_set={'V3_on_V3_feat_all': learn_options}
+        # results, all_learn_options = run_models(["SVC"], orders=[1], adaboost_learning_rates=[0.1], 
+        #                                         adaboost_max_depths=[3], adaboost_num_estimators=[100], 
+        #                                         adaboost_CV=True, learn_options_set=learn_options_set, 
+        #                                         test=False, CV=True)
+        # runner(['AdaBoost'], learn_options_set, orders=[2], where='local', adaboost_learning_rates=[0.1],  adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, exp_name='genefeat')
+ # #util.feature_importances(results)
+
