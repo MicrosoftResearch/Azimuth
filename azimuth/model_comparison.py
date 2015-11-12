@@ -180,7 +180,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None):
     if 'num_thread_per_proc' not in learn_options.keys():
         learn_options['num_thread_per_proc'] = None
 
-    num_proc = azimuth.local_multiprocessing.configure(TEST=test, num_proc=learn_options["num_proc"], 
+    num_proc = azimuth.local_multiprocessing.configure(TEST=test, num_proc=learn_options["num_proc"],
                                                 num_thread_per_proc=learn_options["num_thread_per_proc"])
     learn_options["num_proc"] = num_proc
 
@@ -244,7 +244,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None):
 
     if test:
         learn_options["order"] = 1
-    
+
     if 'convert_30mer_to_31mer' in learn_options and learn_options['convert_30mer_to_31mer'] is True:
         print "WARNING!!! converting 30 mer to 31 mer (and then cutting off first nucleotide to go back to 30mer with a right shift)"
         for i in range(Xdf.shape[0]):
@@ -261,8 +261,8 @@ def setup(test=False, order=1, learn_options=None, data_file=None):
     return Y, feature_sets, target_genes, learn_options, num_proc
 
 
-def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_degrees=[3], 
-               adaboost_learning_rates=[0.1], adaboost_num_estimators=[100], adaboost_max_depths=[3], 
+def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_degrees=[3],
+               adaboost_learning_rates=[0.1], adaboost_num_estimators=[100], adaboost_max_depths=[3],
                adaboost_CV=False, learn_options_set=None, test=False, CV=True):
 
 
@@ -271,9 +271,9 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
     all_learn_options = {}
 
     #shorten so easier to display on graphs
-    feat_models_short = {'L1':"L1", 'L2':"L2", 'elasticnet':"EN", 'linreg':"LR", 
-                         'RandomForest': "RF", 
-                         'AdaBoost':"AB", 'doench': 'doench', 
+    feat_models_short = {'L1':"L1", 'L2':"L2", 'elasticnet':"EN", 'linreg':"LR",
+                         'RandomForest': "RF",
+                         'AdaBoost':"AB", 'doench': 'doench',
                          "logregL1": "logregL1", "sgrna_from_doench":"sgrna_from_doench", 'SVC': 'SVC', 'xu_et_al': 'xu_et_al'}
 
     if not CV:
@@ -290,7 +290,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
             if model in feat_models_short.keys():
                 for order in orders:
                     print "running %s, order %d for %s" % (model, order, learn_options_str)
-                    Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=order, learn_options=partial_learn_opt) # TODO precompute features for all orders, as this is repated for each model                                        
+                    Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=order, learn_options=partial_learn_opt) # TODO precompute features for all orders, as this is repated for each model
 
                     if model == 'L1':
                         learn_options_model = L1_setup(copy.deepcopy(learn_options))
@@ -401,8 +401,8 @@ def save_final_model_V3(filename=None, include_position=True):
     assert filename is not None, "need to provide filename to save final model"
 
     if include_position:
-        learn_options = {"V": 3,               
-                    'train_genes': azimuth.load_data.get_V3_genes(), 
+        learn_options = {"V": 3,
+                    'train_genes': azimuth.load_data.get_V3_genes(),
                     'test_genes': azimuth.load_data.get_V3_genes(),
                     "testing_non_binary_target_name": 'ranks',
                     'include_pi_nuc_feat': True,
@@ -418,7 +418,7 @@ def save_final_model_V3(filename=None, include_position=True):
                     "weighted": None,
                     "training_metric": 'spearmanr',
                     "NDGC_k": 10,
-                    "cv": "gene",                
+                    "cv": "gene",
                     "include_gene_effect": False,
                     "include_drug": False,
                     "include_sgRNAscore": False,
@@ -427,8 +427,8 @@ def save_final_model_V3(filename=None, include_position=True):
                     'normalize_features': False,
                     }
     else:
-        learn_options = {"V": 3,               
-            'train_genes': azimuth.load_data.get_V3_genes(), 
+        learn_options = {"V": 3,
+            'train_genes': azimuth.load_data.get_V3_genes(),
             'test_genes': azimuth.load_data.get_V3_genes(),
             "testing_non_binary_target_name": 'ranks',
             'include_pi_nuc_feat': True,
@@ -444,7 +444,7 @@ def save_final_model_V3(filename=None, include_position=True):
             "weighted": None,
             "training_metric": 'spearmanr',
             "NDGC_k": 10,
-            "cv": "gene",                
+            "cv": "gene",
             "include_gene_effect": False,
             "include_drug": False,
             "include_sgRNAscore": False,
@@ -453,22 +453,33 @@ def save_final_model_V3(filename=None, include_position=True):
             'normalize_features': False,
             }
 
-            
+
     learn_options_set = {'final': learn_options}
-    results, all_learn_options = run_models(["AdaBoost"], orders=[2], adaboost_learning_rates=[0.1], 
-                                            adaboost_max_depths=[3], adaboost_num_estimators=[100], 
-                                            adaboost_CV=False, learn_options_set=learn_options_set, 
+    results, all_learn_options = run_models(["AdaBoost"], orders=[2], adaboost_learning_rates=[0.1],
+                                            adaboost_max_depths=[3], adaboost_num_estimators=[100],
+                                            adaboost_CV=False, learn_options_set=learn_options_set,
                                             test=test, CV=False)
     model = results.values()[0][3][0]
-        
+
     with open(filename, 'wb') as f:
         pickle.dump((model, learn_options), f, -1)
-    
+
     return model
 
 
 def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None):
-    assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
+    # assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
+    print aa_cut, percent_peptide
+    if model_file is None:
+        azimuth_saved_model_dir = os.path.join(os.path.dirname(azimuth.__file__), 'saved_models')
+        if np.any(percent_peptide == -1) or (percent_peptide is None and aa_cut is None):
+            print("No model file specified, using V3_model_nopos")
+            model_name = 'V3_model_nopos.pickle'
+        else:
+            print("No model file specified, using V3_model_full")
+            model_name = 'V3_model_full.pickle'
+
+        model_file = os.path.join(azimuth_saved_model_dir, model_name)
 
     if model is None:
         with open(model_file, 'rb') as f:
@@ -482,8 +493,8 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None):
     # inputs, dim, dimsum, feature_names = pd.concatenate_feature_sets(feature_sets)
 
     Xdf = pandas.DataFrame(columns=[u'30mer', u'Strand'], data=zip(seq, ['NA' for x in range(len(seq))]))
-    
-    if np.any(percent_peptide != -1):
+
+    if np.all(percent_peptide != -1) and (percent_peptide is not None and aa_cut is not None):
         gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(percent_peptide, aa_cut))
     else:
         gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(np.ones(seq.shape[0])*-1, np.ones(seq.shape[0])*-1))
@@ -575,18 +586,18 @@ if __name__ == '__main__':
                 "testing_non_binary_target_name": 'ranks',
                 'include_pi_nuc_feat': True,
                 "gc_features": True,
-                "nuc_features": True,            
-                "include_gene_position": True,                    
+                "nuc_features": True,
+                "include_gene_position": True,
                 "include_NGGX_interaction": True,
                 "include_Tm": True,
                 "include_strand": False,
                 "include_gene_feature": False,
-                "include_gene_guide_feature": 0,                          
+                "include_gene_guide_feature": 0,
                 "extra pairs": False,
-                "weighted": None,            
+                "weighted": None,
                 "training_metric": 'spearmanr',
                 "NDGC_k": 10,
-                "cv": "gene",    
+                "cv": "gene",
                 "adaboost_loss" : 'ls',
                 "include_gene_effect": False,
                 "include_drug": False,
@@ -604,18 +615,18 @@ if __name__ == '__main__':
                 "testing_non_binary_target_name": 'ranks',
                 'include_pi_nuc_feat': True,
                 "gc_features": True,
-                "nuc_features": True,            
-                "include_gene_position": True,                    
+                "nuc_features": True,
+                "include_gene_position": True,
                 "include_NGGX_interaction": True,
                 "include_Tm": True,
                 "include_strand": False,
                 "include_gene_feature": False,
-                "include_gene_guide_feature": 0,                          
+                "include_gene_guide_feature": 0,
                 "extra pairs": False,
-                "weighted": None,            
+                "weighted": None,
                 "training_metric": 'spearmanr',
                 "NDGC_k": 10,
-                "cv": "gene",    
+                "cv": "gene",
                 "adaboost_loss" : 'ls',
                 "include_gene_effect": False,
                 "include_drug": False,
@@ -633,10 +644,9 @@ if __name__ == '__main__':
         # predict('GGGCCGCTGTTGCAGGTGGCGGGTAGGATC', 'sense', 1200, 30.3, model_file='../saved_models/final_model_nicolo.pickle')
 
         # learn_options_set={'V3_on_V3_feat_all': learn_options}
-        # results, all_learn_options = run_models(["SVC"], orders=[1], adaboost_learning_rates=[0.1], 
-        #                                         adaboost_max_depths=[3], adaboost_num_estimators=[100], 
-        #                                         adaboost_CV=True, learn_options_set=learn_options_set, 
+        # results, all_learn_options = run_models(["SVC"], orders=[1], adaboost_learning_rates=[0.1],
+        #                                         adaboost_max_depths=[3], adaboost_num_estimators=[100],
+        #                                         adaboost_CV=True, learn_options_set=learn_options_set,
         #                                         test=False, CV=True)
         # runner(['AdaBoost'], learn_options_set, orders=[2], where='local', adaboost_learning_rates=[0.1],  adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, exp_name='genefeat')
  # #util.feature_importances(results)
-

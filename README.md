@@ -35,7 +35,7 @@ From python, you can get predictions from our model by running:
 ```python
 import azimuth.model_comparison
 
-azimuth.model_comparison.predict(GUIDE, PERCENT_PEPTIDE, CUT_POSITION), model_file=os.path.join(AZIMUTH_FOLDER, 'V3_model_full.pickle'))[0]
+azimuth.model_comparison.predict(GUIDE, CUT_POSITION, PERCENT_PEPTIDE)[0]
 
 ```
 where GUIDE, PERCENT_PEPTIDE and CUT_POSITION are numpy arrays.
