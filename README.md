@@ -1,5 +1,6 @@
 # Azimuth 
 ##### Machine Learning-Based Predictive Modelling of CRISPR/Cas9 guide efficiency.
+[![Travis](https://img.shields.io/travis/MicrosoftResearch/Azimuth.svg)](https://travis-ci.org/MicrosoftResearch/Azimuth) 
 
 #### [**Official project page**](http://research.microsoft.com/en-us/projects/azimuth/)
 
