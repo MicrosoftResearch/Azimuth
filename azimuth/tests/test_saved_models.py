@@ -3,7 +3,7 @@ import azimuth.model_comparison
 import numpy as np
 import unittest
 
-class SavedModelTest(unittest.TestCase):
+class SavedModelTests(unittest.TestCase):
     def test_predictions(self):
 
         data = [['TGGAGGCTGCTTTACCCGCTGTGGGGGCGC', 254, 87, 0.5309, 0.5655],
