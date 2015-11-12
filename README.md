@@ -26,7 +26,7 @@ pip install azimuth
 
 Alternatively, if you want access to the code, you can clone this repository.
 
-**If you prefer not to install python packages or download any code, you can use our model via Excel or as a web service.** Instructions on how to do so are (HERE)[http://research.microsoft.com/en-us/projects/azimuth/] 
+**If you prefer not to install python packages or download any code, you can use our model via Excel or as a web service.** Instructions on how to do so are [HERE](http://research.microsoft.com/en-us/projects/azimuth/)
 
 #### Getting started
 
