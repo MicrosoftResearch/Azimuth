@@ -38,7 +38,7 @@ def set_target(learn_options, classification):
 
     return learn_options
 
-def GP_setup(learn_options, likelihood='gaussian', degree=3):
+def GP_setup(learn_options, likelihood='gaussian', degree=3, set_target_fn=set_target):
     learn_options["method"] = "GPy"
     learn_options['kernel degree'] = degree
 
@@ -46,18 +46,18 @@ def GP_setup(learn_options, likelihood='gaussian', degree=3):
         learn_options['warpedGP'] = True
     else:
         learn_options['warpedGP'] = False
-    learn_options = set_target(learn_options, classification=False)
+    learn_options = set_target_fn(learn_options, classification=False)
 
     return learn_options
 
-def SVC_setup(learn_options, likelihood='gaussian', degree=3):
+def SVC_setup(learn_options, likelihood='gaussian', degree=3,  set_target_fn=set_target):
     learn_options["method"] = "SVC"
-    learn_options = set_target(learn_options, classification=True)
+    learn_options = set_target_fn(learn_options, classification=True)
 
     return learn_options
 
-def L1_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def L1_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options["method"] = "linreg"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
@@ -66,8 +66,8 @@ def L1_setup(learn_options):
 
     return learn_options
 
-def L2_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def L2_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options["method"] = "linreg"
     learn_options["penalty"] = "L2"
     learn_options["feature_select"] = False
@@ -76,18 +76,18 @@ def L2_setup(learn_options):
 
     return learn_options
 
-def mean_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def mean_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options['method'] = 'mean'
     return learn_options
 
-def random_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def random_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options['method'] = 'random'
     return learn_options
 
-def elasticnet_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def elasticnet_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options["method"] = "linreg"
     learn_options["penalty"] = "EN"
     learn_options["feature_select"] = False
@@ -95,48 +95,48 @@ def elasticnet_setup(learn_options):
     learn_options["alpha"] = np.array([1e-5*pow(2,x) for x in range(0,30)])
     return learn_options
 
-def DNN_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def DNN_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options['method'] = 'DNN'
     learn_options['DNN target variable'] = 'score'#'score_drug_gene_quantized'
     # learn_options['DNN architecture'] = (119, 10, 10, 10, 2)
     return learn_options
 
-def RF_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def RF_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options['method'] = 'RandomForestRegressor'
     return learn_options
 
-def doench_setup(learn_options):
-    learn_options = set_target(learn_options, classification=True)
+def doench_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=True)
     learn_options['method'] = 'doench'
     return learn_options
 
-def sgrna_from_doench_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def sgrna_from_doench_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options['method'] = 'sgrna_from_doench'
     return learn_options
 
-def linreg_setup(learn_options):
+def linreg_setup(learn_options, set_target_fn=set_target):
     learn_options["method"] = "linreg"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
     learn_options["alpha"] = np.array([0.0])
     learn_options["loss"] = "squared"
-    learn_options = set_target(learn_options, classification=False)
+    learn_options = set_target_fn(learn_options, classification=False)
 
     return learn_options
 
-def logregL1_setup(learn_options):
-    learn_options = set_target(learn_options, classification=True)
+def logregL1_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=True)
     learn_options["method"] = "logregL1"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
     learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
     return learn_options
 
-def LASSOs_ensemble_setup(learn_options):
-    learn_options = set_target(learn_options, classification=False)
+def LASSOs_ensemble_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options["method"] = "lasso_ensemble"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
@@ -145,14 +145,14 @@ def LASSOs_ensemble_setup(learn_options):
 
     return learn_options
 
-def xu_et_al_setup(learn_options):
-    learn_options = set_target(learn_options, classification=True)
+def xu_et_al_setup(learn_options, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=True)
     learn_options["method"] = "xu_et_al"
 
     return learn_options
 
-def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate=0.1, CV=False):
-    learn_options = set_target(learn_options, classification=False)
+def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate=0.1, CV=False, set_target_fn=set_target):
+    learn_options = set_target_fn(learn_options, classification=False)
     learn_options['method'] = "AdaBoostRegressor"
     learn_options['adaboost_version'] = 'python' # "R" or "python"
 
@@ -173,72 +173,76 @@ def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate
     return learn_options
 
 
-def setup(test=False, order=1, learn_options=None, data_file=None):
-
+def shared_setup(learn_options, order, test):
     if 'num_proc' not in learn_options.keys():
         learn_options['num_proc'] = None
     if 'num_thread_per_proc' not in learn_options.keys():
         learn_options['num_thread_per_proc'] = None
-
+    
     num_proc = azimuth.local_multiprocessing.configure(TEST=test, num_proc=learn_options["num_proc"],
                                                 num_thread_per_proc=learn_options["num_thread_per_proc"])
     learn_options["num_proc"] = num_proc
-
+    
     learn_options["order"] = order  # gets used many places in code, not just here
-
+    
     if "cv" not in learn_options.keys():
         # if no CV preference is specified, use leave-one-gene-out
         learn_options["cv"] = "gene"
-
+    
     if "normalize_features" not in learn_options.keys():
         # if no CV preference is specified, use leave-one-gene-out
         learn_options["normalize_features"] = True
-
+    
     if "weighted" not in learn_options.keys():
         learn_options['weighted'] = None
-
+    
     if "all pairs" not in learn_options.keys():
         learn_options["all pairs"] = False
-
+    
     if "include_known_pairs" not in learn_options.keys():
         learn_options["include_known_pairs"] = False
-
+    
     if "include_gene_guide_feature" not in learn_options.keys():
         learn_options["include_gene_guide_feature"] = 0 #used as window size, so 0 is none
-
+    
     #these should default to true to match experiments before they were options:
     if "gc_features" not in learn_options.keys():
         learn_options["gc_features"] = True
     if "nuc_features" not in learn_options.keys():
         learn_options["nuc_features"] = True
-
+    
     if 'train_genes' not in learn_options.keys():
         learn_options["train_genes"] = None
     if 'test_genes' not in learn_options.keys():
         learn_options["test_genes"] = None
-
+    
     if "num_proc" not in learn_options:
         learn_options["num_proc"] = None
     if "num_thread_per_proc" not in learn_options:
         learn_options["num_thread_per_proc"] = None
-
+    
     if 'seed' not in learn_options:
         learn_options['seed'] = 1
-
+    
     if "flipV1target" not in learn_options:
         learn_options["flipV1target"] = False
-
+    
     if 'num_genes_remove_train' not in learn_options:
         learn_options['num_genes_remove_train'] = None
-
+    
     if "include_microhomology" not in learn_options:
-        learn_options["include_microhomology"] = False
+        learn_options["include_microhomology"] = False    
+    
+    return num_proc
 
+def setup(test=False, order=1, learn_options=None, data_file=None):
+
+    num_proc = shared_setup(learn_options, order, test)
 
     assert "testing_non_binary_target_name" in learn_options.keys(), "need this in order to get metrics, though used to be not needed, so you may newly see this error"
     if learn_options["testing_non_binary_target_name"] not in ['ranks', 'raw', 'thrs']:
         raise Exception('learn_otions["testing_non_binary_target_name"] must be in ["ranks", "raw", "thrs"]')
-
+    
     Xdf, Y, gene_position, target_genes = azimuth.load_data.from_file(data_file, learn_options)
     learn_options['all_genes'] = target_genes
 
@@ -263,7 +267,12 @@ def setup(test=False, order=1, learn_options=None, data_file=None):
 
 def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_degrees=[3],
                adaboost_learning_rates=[0.1], adaboost_num_estimators=[100], adaboost_max_depths=[3],
-               adaboost_CV=False, learn_options_set=None, test=False, CV=True):
+               adaboost_CV=False, learn_options_set=None, test=False, CV=True, setup_function=setup, set_target_fn=set_target):
+
+    '''
+    CV is set to false if want to train a final model and not cross-validate, but it goes in to what
+    looks like cv code
+    '''
 
 
     results = {}
@@ -290,33 +299,33 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
             if model in feat_models_short.keys():
                 for order in orders:
                     print "running %s, order %d for %s" % (model, order, learn_options_str)
-                    Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=order, learn_options=partial_learn_opt) # TODO precompute features for all orders, as this is repated for each model
+                    Y, feature_sets, target_genes, learn_options, num_proc = setup_function(test=test, order=order, learn_options=partial_learn_opt) # TODO precompute features for all orders, as this is repated for each model
 
                     if model == 'L1':
-                        learn_options_model = L1_setup(copy.deepcopy(learn_options))
+                        learn_options_model = L1_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'L2':
-                        learn_options_model = L2_setup(copy.deepcopy(learn_options))
+                        learn_options_model = L2_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'elasticnet':
-                        learn_options_model = elasticnet_setup(copy.deepcopy(learn_options))
+                        learn_options_model = elasticnet_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'linreg':
-                        learn_options_model = linreg_setup(copy.deepcopy(learn_options))
+                        learn_options_model = linreg_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == "logregL1":
-                        learn_options_model = logregL1_setup(copy.deepcopy(learn_options))
+                        learn_options_model = logregL1_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'RandomForest':
-                        learn_options_model = RF_setup(copy.deepcopy(learn_options))
+                        learn_options_model = RF_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'SVC':
-                        learn_options_model = SVC_setup(copy.deepcopy(learn_options))
+                        learn_options_model = SVC_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'doench':
-                        learn_options_model = doench_setup(copy.deepcopy(learn_options))
+                        learn_options_model = doench_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'sgrna_from_doench':
-                        learn_options_model = sgrna_from_doench_setup(copy.deepcopy(learn_options))
+                        learn_options_model = sgrna_from_doench_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'xu_et_al':
-                        learn_options_model = xu_et_al_setup(copy.deepcopy(learn_options))
+                        learn_options_model = xu_et_al_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'AdaBoost':
                         for learning_rate in adaboost_learning_rates:
                             for num_estimators in adaboost_num_estimators:
                                 for max_depth in adaboost_max_depths:
-                                    learn_options_model = adaboost_setup(copy.deepcopy(learn_options), learning_rate=learning_rate, num_estimators=num_estimators, max_depth=max_depth, CV=adaboost_CV)
+                                    learn_options_model = adaboost_setup(copy.deepcopy(learn_options), learning_rate=learning_rate, num_estimators=num_estimators, max_depth=max_depth, CV=adaboost_CV, set_target_fn=set_target_fn)
                         model_string = feat_models_short[model] + '_or%d_md%d_lr%.2f_n%d_%s' % (learn_options_set[learn_options_str]["order"], max_depth, learning_rate, num_estimators, learn_options_str)
                     if model != 'AdaBoost':
                         model_string = feat_models_short[model] + '_ord%d_%s' % (learn_options_set[learn_options_str]["order"], learn_options_str)
@@ -326,6 +335,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
                     all_learn_options[model_string] = learn_options_model
             # if the model doesn't require explicit featurization
             else:
+                assert setup_fn==setup, "not yet modified to handle this"
                 print "running %s for %s" % (model, learn_options_str)
                 Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=1, learn_options=partial_learn_opt)
                 if model == 'mean':
