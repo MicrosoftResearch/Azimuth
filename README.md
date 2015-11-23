@@ -18,7 +18,7 @@ Please cite this paper if using our predictive model:
 
 #### Installation (python package)
 
-Azimuth is available from the python package index. 
+Azimuth is available from the python package index. From the command prompt, type:
 
 ```shell
 pip install azimuth
@@ -26,7 +26,7 @@ pip install azimuth
 
 Alternatively, if you want access to the code, you can clone this repository.
 
-To run our unit tests, navigate to the main Azimuth directory and type:
+To run our unit tests, navigate to the main Azimuth directory, and then from the command prompt, type
 ```shell
 nosetests
 ```
