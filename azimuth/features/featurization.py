@@ -406,7 +406,11 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
 
 
 
-def nucleotide_features(s, order, include_pos_independent, max_index_to_use, prefix="", feature_type='all'):
+def get_alphabet(order, raw_alphabet = ['A', 'T', 'C', 'G']):    
+    alphabet = ["".join(i) for i in itertools.product(raw_alphabet, repeat=order)]
+    return alphabet, raw_alphabet
+
+def nucleotide_features(s, order, include_pos_independent, max_index_to_use, prefix="", feature_type='all',raw_alphabet = ['A', 'T', 'C', 'G']):
     '''
     compute position-specific order-mer features for the 4-letter alphabet
     (e.g. for a sequence of length 30, there are 30*4 single nucleotide features
@@ -416,8 +420,7 @@ def nucleotide_features(s, order, include_pos_independent, max_index_to_use, pre
         s = s[:max_index_to_use]
     #assert(len(s)==30, "length not 30")
     #s = s[:30] #cut-off at thirty to clean up extra data that they accidentally left in, and were instructed to ignore in this way
-    raw_alphabet = ['A', 'T', 'C', 'G']
-    alphabet = ["".join(i) for i in itertools.product(raw_alphabet, repeat=order)]
+    alphabet, raw_alphabet = get_alphabet(order, raw_alphabet = raw_alphabet)
     features_pos_dependent = np.zeros(len(alphabet)*(len(s)-(order-1)))
     features_pos_independent = np.zeros(np.power(len(raw_alphabet),order))
 
