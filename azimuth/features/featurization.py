@@ -123,7 +123,7 @@ def NGGX_interaction_feature(data):
         if seq[25:27] != "GG":
             raise Exception("expected GG but found %s" % seq[25:27])
         NX = seq[24]+seq[27]
-        NX_onehot = nucleotide_features(NX,order=2, include_pos_independent=False, max_index_to_use=2, prefix="NGGX")
+        NX_onehot = nucleotide_features(NX,order=2, feature_type='pos_dependent', max_index_to_use=2, prefix="NGGX")
         # NX_onehot[:] = np.random.rand(NX_onehot.shape[0]) ##TESTING RANDOM FEATURE
         feat_NX = pandas.concat([feat_NX, NX_onehot], axis=1)
     return feat_NX.T
@@ -386,36 +386,26 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
 
     fast = True
 
-    if fast:
-        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, include_pos_independent, max_index_to_use, prefix, 'pos_dependent'))
-        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, include_pos_independent, max_index_to_use, prefix, 'pos_independent'))
+    if include_pos_independent:
+        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
+        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))    
+        return feat_pd, feat_pi
     else:
-        # old, much slower code
-        feat_pd = pandas.DataFrame()
-        feat_pi = pandas.DataFrame()
-        for s in seq_data_frame.values:
-            assert not (s==''), "string is empty"
-            feat_pd_tmp, feat_pi_tmp = nucleotide_features(s, order, include_pos_independent, max_index_to_use, prefix=prefix)
-            feat_pd = pandas.concat([feat_pd,feat_pd_tmp], axis=1)
-            feat_pi = pandas.concat([feat_pi,feat_pi_tmp], axis=1)
-        
-        feat_pd = feat_pd.T
-        feat_pi = feat_pi.T  
-    
-    return feat_pd, feat_pi
-
-
+        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
+        return feat_pd
 
 def get_alphabet(order, raw_alphabet = ['A', 'T', 'C', 'G']):    
     alphabet = ["".join(i) for i in itertools.product(raw_alphabet, repeat=order)]
     return alphabet, raw_alphabet
 
-def nucleotide_features(s, order, include_pos_independent, max_index_to_use, prefix="", feature_type='all',raw_alphabet = ['A', 'T', 'C', 'G']):
+def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all', raw_alphabet = ['A', 'T', 'C', 'G']):
     '''
     compute position-specific order-mer features for the 4-letter alphabet
     (e.g. for a sequence of length 30, there are 30*4 single nucleotide features
           and (30-1)*4^2=464 double nucleotide features
     '''
+    assert feature_type in ['all', 'pos_independent', 'pos_dependent']
+
     if max_index_to_use is not None:
         s = s[:max_index_to_use]
     #assert(len(s)==30, "length not 30")
@@ -423,22 +413,19 @@ def nucleotide_features(s, order, include_pos_independent, max_index_to_use, pre
     alphabet, raw_alphabet = get_alphabet(order, raw_alphabet = raw_alphabet)
     features_pos_dependent = np.zeros(len(alphabet)*(len(s)-(order-1)))
     features_pos_independent = np.zeros(np.power(len(raw_alphabet),order))
-
-
-    #for position in range(0, len(s)-order, 1): JENN 9/4/2014 failing when len(s)=2
+        
     for position in range(0, len(s)-order+1, 1):
         nucl = s[position:position+order]
         features_pos_dependent[alphabet.index(nucl)+(position*len(alphabet))] = 1.0
         features_pos_independent[alphabet.index(nucl)] += 1.0
     index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
 
-    if feature_type == 'all' or feature_type == 'pos_independent':
-        if include_pos_independent:
-            index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
-            if feature_type == 'all':
-                return pandas.Series(features_pos_dependent,index=index_dependent), pandas.Series(features_pos_independent,index=index_independent)
-            else:
-                return pandas.Series(features_pos_independent, index=index_independent)
+    if feature_type == 'all' or feature_type == 'pos_independent':        
+        index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
+        if feature_type == 'all':
+            return pandas.Series(features_pos_dependent,index=index_dependent), pandas.Series(features_pos_independent,index=index_independent)
+        else:
+            return pandas.Series(features_pos_independent, index=index_independent)
     
     if np.any(np.isnan(features_pos_dependent)): raise Exception("found nan features in features_pos_dependent")
     if np.any(np.isnan(features_pos_independent)): raise Exception("found nan features in features_pos_independent")
