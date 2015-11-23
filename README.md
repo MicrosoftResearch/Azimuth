@@ -26,6 +26,12 @@ pip install azimuth
 
 Alternatively, if you want access to the code, you can clone this repository.
 
+To run our unit tests, navigate to the main Azimuth directory and type:
+```shell
+nosetests
+```
+If these pass, you will see "OK" as the last printout.
+
 **If you prefer not to install python packages or download any code, you can use our model via Excel or as a web service.** Instructions on how to do so are [HERE](http://research.microsoft.com/en-us/projects/azimuth/)
 
 #### Getting started
