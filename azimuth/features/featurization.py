@@ -416,7 +416,7 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
         
     for position in range(0, len(s)-order+1, 1):
         nucl = s[position:position+order]
-        features_pos_dependent[alphabet.index(nucl)+(position*len(alphabet))] = 1.0
+        features_pos_dependent[alphabet.index(nucl) + (position*len(alphabet))] = 1.0
         features_pos_independent[alphabet.index(nucl)] += 1.0
     index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
 
