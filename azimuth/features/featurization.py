@@ -10,7 +10,7 @@ import Bio.SeqUtils.MeltingTemp as Tm
 import pickle
 import itertools
 
-def featurize_data(data, learn_options, Y, gene_position):
+def featurize_data(data, learn_options, Y, gene_position, pam_audit=True):
     '''
     assumes that data contains the 30mer
     returns set of features from which one can make a kernel for each one
@@ -55,7 +55,7 @@ def featurize_data(data, learn_options, Y, gene_position):
         feature_sets['known pairs'] = pandas.DataFrame(Y['test'])
 
     if learn_options["include_NGGX_interaction"]:
-        feature_sets["NGGX"] = NGGX_interaction_feature(data)
+        feature_sets["NGGX"] = NGGX_interaction_feature(data, pam_audit)
 
     if learn_options["include_Tm"]:
         feature_sets["Tm"] = Tm_feature(data)
@@ -111,7 +111,7 @@ def check_feature_set_dimensions(feature_sets):
             assert N == N2, "# of individuals do not match up across feature sets"
 
 
-def NGGX_interaction_feature(data):
+def NGGX_interaction_feature(data, pam_audit=True):
     '''
     assuming 30-mer, grab the NGGX _ _ positions, and make a one-hot
     encoding of the NX nucleotides yielding 4x4=16 features
@@ -120,7 +120,7 @@ def NGGX_interaction_feature(data):
     feat_NX = pandas.DataFrame()
     # check that GG is where we think
     for seq in sequence:
-        if seq[25:27] != "GG":
+        if pam_audit and seq[25:27] != "GG":
             raise Exception("expected GG but found %s" % seq[25:27])
         NX = seq[24]+seq[27]
         NX_onehot = nucleotide_features(NX,order=2, feature_type='pos_dependent', max_index_to_use=2, prefix="NGGX")

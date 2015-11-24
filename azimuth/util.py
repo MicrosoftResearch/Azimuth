@@ -191,7 +191,8 @@ def datestamp(appendrandom=False):
 
 def get_gene_sequence(gene_name):
     try:
-        gene_file = '../gene_sequences/%s_sequence.txt' % gene_name
+        #gene_file = '../gene_sequences/%s_sequence.txt' % gene_name
+        gene_file = 'gene_sequences/%s_sequence.txt' % gene_name
         with open(gene_file, 'rb') as f:
             seq = f.read()
             seq = seq.replace('\r\n', '')

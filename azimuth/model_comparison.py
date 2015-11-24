@@ -477,7 +477,11 @@ def save_final_model_V3(filename=None, include_position=True):
     return model
 
 
-def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None):
+def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam_audit=True):
+    """
+    if pam_audit==False, then it will not check for GG in the expected position
+    this is useful if predicting on PAM mismatches, such as with off-target
+    """
     # assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
     print aa_cut, percent_peptide
     if model_file is None:
@@ -509,7 +513,7 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None):
     else:
         gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(np.ones(seq.shape[0])*-1, np.ones(seq.shape[0])*-1))
 
-    feature_sets = feat.featurize_data(Xdf, learn_options, pandas.DataFrame(), gene_position)
+    feature_sets = feat.featurize_data(Xdf, learn_options, pandas.DataFrame(), gene_position, pam_audit)
     inputs, dim, dimsum, feature_names = azimuth.util.concatenate_feature_sets(feature_sets)
 
     # call to scikit-learn, returns a vector of predicted values
