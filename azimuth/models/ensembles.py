@@ -34,23 +34,23 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
 
             clf.fit(X[train], y[train].flatten())
             y_pred = clf.predict(X[test])[:, None]
-        else: # optimize the parameters if the adaboosted algorithm
-                        
-            from hyperopt import hp, fmin, tpe, rand
-                        
-            def adaboost_scoring_bo(params):
-                # label_encoder = sklearn.preprocessing.LabelEncoder()
-                # label_encoder.fit(y_all['Target gene'].values[train])
-                # gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
-                # n_folds = len(np.unique(gene_classes))
-                cv = sklearn.cross_validation.KFold(y_all['Target gene'].values[train].shape[0], n_folds=20, shuffle=True) 
-                est = en.GradientBoostingRegressor(n_estimators=1000, learning_rate=params['learning_rate'], max_depth=params['max_depth'], 
-                                                   min_samples_leaf=params['min_samples_leaf'], max_features=params['max_features'])
-                scorer = cross_val_score(est, X[train], y[train].flatten(), cv=cv, n_jobs=20)
-                return np.median(scorer)                       
+        else: # optimize the parameters if the adaboosted algorithm                       
 
             if learn_options["algorithm_hyperparam_search"]=="bo":
+                print
 
+                from hyperopt import hp, fmin, tpe, rand
+                                           
+                def adaboost_scoring_bo(params):
+                    # label_encoder = sklearn.preprocessing.LabelEncoder()
+                    # label_encoder.fit(y_all['Target gene'].values[train])
+                    # gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
+                    # n_folds = len(np.unique(gene_classes))
+                    cv = sklearn.cross_validation.KFold(y_all['Target gene'].values[train].shape[0], n_folds=20, shuffle=True) 
+                    est = en.GradientBoostingRegressor(n_estimators=1000, learning_rate=params['learning_rate'], max_depth=params['max_depth'], 
+                                                       min_samples_leaf=params['min_samples_leaf'], max_features=params['max_features'])
+                    scorer = cross_val_score(est, X[train], y[train].flatten(), cv=cv, n_jobs=20)
+                    return np.median(scorer)         
                 space = {
                         'learning_rate': hp.uniform('learning_rate', 0.001, 0.1),
                          'max_depth': hp.quniform('max_depth', 1, 8, 1),
