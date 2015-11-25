@@ -23,7 +23,6 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
     AdaBoostRegressor from scikitlearn.
     '''
 
-
     if learn_options['adaboost_version'] == 'python':
         if not learn_options['adaboost_CV']:
             clf = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'], learning_rate=learn_options['adaboost_learning_rate'],
@@ -35,10 +34,10 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
 
             clf.fit(X[train], y[train].flatten())
             y_pred = clf.predict(X[test])[:, None]
-        else:
-
+        else: # optimize the parameters if the adaboosted algorithm
+                        
             from hyperopt import hp, fmin, tpe, rand
-
+                        
             def adaboost_scoring_bo(params):
                 # label_encoder = sklearn.preprocessing.LabelEncoder()
                 # label_encoder.fit(y_all['Target gene'].values[train])
@@ -48,40 +47,53 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
                 est = en.GradientBoostingRegressor(n_estimators=1000, learning_rate=params['learning_rate'], max_depth=params['max_depth'], 
                                                    min_samples_leaf=params['min_samples_leaf'], max_features=params['max_features'])
                 scorer = cross_val_score(est, X[train], y[train].flatten(), cv=cv, n_jobs=20)
-                return np.median(scorer)
+                return np.median(scorer)                       
 
-            space = {
-                    'learning_rate': hp.uniform('learning_rate', 0.001, 0.1),
-                     'max_depth': hp.quniform('max_depth', 1, 8, 1),
-                     'min_samples_leaf': hp.quniform('min_samples_leaf', 3, 20, 1),
-                     'max_features': hp.uniform('max_features', 0.05, 1.0)}
+            if learn_options["algorithm_hyperparam_search"]=="bo":
 
-            best = fmin(adaboost_scoring_bo, space, algo=tpe.suggest, max_evals=50, verbose=1)
-            print best
-            clf = en.GradientBoostingRegressor(n_estimators=1000, 
-                                               learning_rate=best['learning_rate'], 
-                                               max_depth=best['max_depth'], 
-                                               min_samples_leaf=best['min_samples_leaf'], 
-                                               max_features=best['max_features'])
+                space = {
+                        'learning_rate': hp.uniform('learning_rate', 0.001, 0.1),
+                         'max_depth': hp.quniform('max_depth', 1, 8, 1),
+                         'min_samples_leaf': hp.quniform('min_samples_leaf', 3, 20, 1),
+                         'max_features': hp.uniform('max_features', 0.05, 1.0)}
 
-            clf.fit(X[train], y[train].flatten())
-            # print "Adaboost with GridSearch"
-            # from sklearn.grid_search import GridSearchCV
-            # param_grid = {'learning_rate': [0.1, 0.05, 0.01],
-            #               'max_depth': [4, 5, 6, 7],
-            #               'min_samples_leaf': [5, 7, 10, 12, 15],
-            #               'max_features': [1.0, 0.5, 0.3, 0.1]}
+                best = fmin(adaboost_scoring_bo, space, algo=tpe.suggest, max_evals=50, verbose=1)
+                print best
+                clf = en.GradientBoostingRegressor(n_estimators=learn_options['adaboost_n_estimators'], 
+                                                   learning_rate=best['learning_rate'], 
+                                                   max_depth=best['max_depth'], 
+                                                   min_samples_leaf=best['min_samples_leaf'], 
+                                                   max_features=best['max_features'])
+
+                clf.fit(X[train], y[train].flatten())
+            elif learn_options["algorithm_hyperparam_search"]=="grid":
+                 n_jobs = 20
+
+                 print "Adaboost with GridSearch"
+                 from sklearn.grid_search import GridSearchCV
+                 #param_grid = {'learning_rate': [0.1, 0.05, 0.01],
+                 #              'max_depth': [4, 5, 6, 7],
+                 #              'min_samples_leaf': [5, 7, 10, 12, 15],
+                 #              'max_features': [1.0, 0.5, 0.3, 0.1]}
+                 param_grid = {'learning_rate': [0.1, 0.01],
+                               'max_depth': [4, 7],
+                               'min_samples_leaf': [5, 15],
+                               'max_features': [1.0, 0.1]}
 
 
-            # label_encoder = sklearn.preprocessing.LabelEncoder()
-            # label_encoder.fit(y_all['Target gene'].values[train])
-            # gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
-            # n_folds = len(np.unique(gene_classes))
-            # cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
+                 label_encoder = sklearn.preprocessing.LabelEncoder()
+                 label_encoder.fit(y_all['Target gene'].values[train])
+                 gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
+                 n_folds = len(np.unique(gene_classes))
+                 cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
 
-            # est = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'], n_estimators=learn_options['adaboost_n_estimators'])
-            # clf = GridSearchCV(est, param_grid, n_jobs=20, verbose=1, cv=cv, scoring=spearman_scoring, iid=False).fit(X[train], y[train].flatten())
-            # print clf.best_params_
+                 est = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'], n_estimators=learn_options['adaboost_n_estimators'])
+                 clf = GridSearchCV(est, param_grid, n_jobs=n_jobs, verbose=1, cv=cv, scoring=spearman_scoring, iid=False).fit(X[train], y[train].flatten())
+                 print clf.best_params_
+            else:
+                raise Exception("if using adaboost_CV then need to specify grid (grid search) or bo (bayesian optimization)")
+
+
             y_pred = clf.predict(X[test])[:, None]
     else:
         raise NotImplementedError

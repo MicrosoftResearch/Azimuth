@@ -151,7 +151,9 @@ def xu_et_al_setup(learn_options, set_target_fn=set_target):
 
     return learn_options
 
-def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate=0.1, CV=False, set_target_fn=set_target):
+def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate=0.1, set_target_fn=set_target):
+    """
+    """
     learn_options = set_target_fn(learn_options, classification=False)
     learn_options['method'] = "AdaBoostRegressor"
     learn_options['adaboost_version'] = 'python' # "R" or "python"
@@ -161,13 +163,11 @@ def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate
     if 'adaboost_alpha' not in learn_options.keys():
         learn_options['adaboost_alpha'] = 0.5 # this parameter is only used by the huber and quantile loss functions.
 
-    if not CV:
-        learn_options['adaboost_CV'] = False
+    if not learn_options['adaboost_CV']:        
         learn_options['adaboost_learning_rate'] = learning_rate
         learn_options['adaboost_n_estimators'] = num_estimators
         learn_options['adaboost_max_depth'] = max_depth
-    else:
-        learn_options['adaboost_CV'] = True
+    else:        
         learn_options['adaboost_n_estimators'] = num_estimators
 
     return learn_options
@@ -231,7 +231,10 @@ def shared_setup(learn_options, order, test):
         learn_options['num_genes_remove_train'] = None
     
     if "include_microhomology" not in learn_options:
-        learn_options["include_microhomology"] = False    
+        learn_options["include_microhomology"] = False   
+        
+    if "algorithm_hyperparam_search" not in learn_options:
+        learn_options["algorithm_hyperparam_search"] = "grid" # other options is bo for bayesian optimization
     
     return num_proc
 
@@ -267,7 +270,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
 
 def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_degrees=[3],
                adaboost_learning_rates=[0.1], adaboost_num_estimators=[100], adaboost_max_depths=[3],
-               adaboost_CV=False, learn_options_set=None, test=False, CV=True, setup_function=setup, set_target_fn=set_target):
+               learn_options_set=None, test=False, CV=True, setup_function=setup, set_target_fn=set_target):
 
     '''
     CV is set to false if want to train a final model and not cross-validate, but it goes in to what
@@ -289,6 +292,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
         print "Received option CV=False, so I'm training using all of the data"
         assert len(learn_options_set.keys()) == 1, "when CV is False, only 1 set of learn options is allowed"
         assert len(models) == 1, "when CV is False, only 1 model is allowed"
+                    
 
     for learn_options_str in learn_options_set.keys():
         # these options get augmented in setup
@@ -325,7 +329,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
                         for learning_rate in adaboost_learning_rates:
                             for num_estimators in adaboost_num_estimators:
                                 for max_depth in adaboost_max_depths:
-                                    learn_options_model = adaboost_setup(copy.deepcopy(learn_options), learning_rate=learning_rate, num_estimators=num_estimators, max_depth=max_depth, CV=adaboost_CV, set_target_fn=set_target_fn)
+                                    learn_options_model = adaboost_setup(copy.deepcopy(learn_options), learning_rate=learning_rate, num_estimators=num_estimators, max_depth=max_depth, set_target_fn=set_target_fn)
                         model_string = feat_models_short[model] + '_or%d_md%d_lr%.2f_n%d_%s' % (learn_options_set[learn_options_str]["order"], max_depth, learning_rate, num_estimators, learn_options_str)
                     if model != 'AdaBoost':
                         model_string = feat_models_short[model] + '_ord%d_%s' % (learn_options_set[learn_options_str]["order"], learn_options_str)
@@ -364,6 +368,19 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
     return results, all_learn_options
 
 
+def pickle_runner_results(exp_name, results, all_learn_options, relpath="/../" + "results"):
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath) + relpath
+    if not os.path.exists(dname):
+        os.makedirs(dname)
+        print "Created directory: %s" % str(dname)
+    if exp_name is None:
+        exp_name = results.keys()[0]
+    myfile = dname+'/'+ exp_name + '.pickle'
+    with open(myfile, 'wb') as f:
+        print "writing results to %s" % myfile
+        pickle.dump((results, all_learn_options), f, -1)
+
 def runner(models, learn_options, GP_likelihoods=None, orders=None, WD_kernel_degrees=None, where='local', cluster_user='fusi', cluster='RR1-N13-09-H44', test=False, exp_name = None, **kwargs):
 
     if where == 'local':
@@ -372,17 +389,7 @@ def runner(models, learn_options, GP_likelihoods=None, orders=None, WD_kernel_de
         azimuth.util.plot_all_metrics(all_metrics, gene_names, all_learn_options, save=True)
 
         # for non-local (i.e. cluster), the comparable code is in cli_run_model.py
-        abspath = os.path.abspath(__file__)
-        dname = os.path.dirname(abspath) + "/../" + "results"
-        if not os.path.exists(dname):
-            os.makedirs(dname)
-            print "Created directory: %s" % str(dname)
-        if exp_name is None:
-            exp_name = results.keys()[0]
-        myfile = dname+'/'+ exp_name + '.pickle'
-        with open(myfile, 'wb') as f:
-            print "writing results to %s" % myfile
-            pickle.dump((results, all_learn_options), f, -1)
+        pickle_runner_results(exp_name, results, all_learn_options)
 
         return results, all_learn_options, all_metrics, gene_names
 
@@ -467,7 +474,7 @@ def save_final_model_V3(filename=None, include_position=True):
     learn_options_set = {'final': learn_options}
     results, all_learn_options = run_models(["AdaBoost"], orders=[2], adaboost_learning_rates=[0.1],
                                             adaboost_max_depths=[3], adaboost_num_estimators=[100],
-                                            adaboost_CV=False, learn_options_set=learn_options_set,
+                                            learn_options_set=learn_options_set,
                                             test=test, CV=False)
     model = results.values()[0][3][0]
 
@@ -588,7 +595,7 @@ if __name__ == '__main__':
              #results, all_learn_options = run_models(['linreg', 'L1', 'L2'], orders=[1], test=True, target_name='score')
              # all_learn_options is similar to (and contains all of_ learn_options_set, but has more
              # entries populated, by the model specification, etc.
-            results, all_learn_options = run_models(["AdaBoost"], orders=[1], adaboost_learning_rates=[0.1], adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, learn_options_set=learn_options_set, test=test, produce_final_model=True)
+            results, all_learn_options = run_models(["AdaBoost"], orders=[1], adaboost_learning_rates=[0.1], adaboost_max_depths=[3], adaboost_num_estimators=[100], learn_options_set=learn_options_set, test=test, produce_final_model=True)
              #results, all_learn_options = run_models([ "AdaBoost"], orders=[2], adaboost_learning_rates=[0.1], adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, learn_options_set=learn_options_set, test=test)
              # all_metrics, gene_names = util.get_all_metrics(results, test_metrics=['AUC', 'spearmanr'], learn_options_set=learn_options_set)
              # util.plot_all_metrics(all_metrics, gene_names, all_learn_options, save=True)

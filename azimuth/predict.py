@@ -229,7 +229,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
 
     #do the cross-validation
     num_proc = learn_options["num_proc"]
-    if num_proc>1:
+    if num_proc > 1:
         num_proc = np.min([num_proc,len(cv)])
         print "using multiprocessing with %d procs--one for each fold" % num_proc
         jobs = []
