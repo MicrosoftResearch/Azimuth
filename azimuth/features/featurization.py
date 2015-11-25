@@ -58,7 +58,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True):
         feature_sets["NGGX"] = NGGX_interaction_feature(data, pam_audit)
 
     if learn_options["include_Tm"]:
-        feature_sets["Tm"] = Tm_feature(data)
+        feature_sets["Tm"] = Tm_feature(data, pam_audit)
 
     if learn_options["include_sgRNAscore"]:
         feature_sets["sgRNA Score"] = pandas.DataFrame(data["sgRNA Score"])
@@ -335,7 +335,7 @@ def gc_cont(seq):
 
 
 
-def Tm_feature(data):
+def Tm_feature(data, pam_audit=True):
     '''
     assuming '30-mer'is a key
     get melting temperature features from:
@@ -347,7 +347,7 @@ def Tm_feature(data):
     sequence = data['30mer'].values
     featarray = np.ones((sequence.shape[0],4))
     for i, seq in enumerate(sequence):
-        if seq[25:27]!="GG":
+        if pam_audit and seq[25:27]!="GG":
             raise Exception("expected GG but found %s" % seq[25:27])
         rna = False
         featarray[i,0] = Tm.Tm_staluc(seq, rna=rna)        #30mer Tm

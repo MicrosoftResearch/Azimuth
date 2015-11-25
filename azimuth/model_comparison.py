@@ -235,7 +235,7 @@ def shared_setup(learn_options, order, test):
     
     return num_proc
 
-def setup(test=False, order=1, learn_options=None, data_file=None):
+def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=True):
 
     num_proc = shared_setup(learn_options, order, test)
 
@@ -259,7 +259,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None):
         # Y = Y[to_keep]
         Xdf["30mer"] = Xdf["30mer"].apply(lambda x: x[1:]) # chop the first nucleotide
 
-    feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position)
+    feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position, pam_audit)
     np.random.seed(learn_options['seed'])
 
     return Y, feature_sets, target_genes, learn_options, num_proc
