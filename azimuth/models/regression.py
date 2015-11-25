@@ -132,7 +132,7 @@ def linreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
                     performance[i, j] += tmp_auc
 
                 elif learn_options['training_metric'] == 'spearmanr':
-                    spearman = util.spearmanr_nonan(y_all[learn_options['ground_truth_label']][train][test_inner], tmp_pred.flatten())[0]
+                    spearman = azimuth.util.spearmanr_nonan(y_all[learn_options['ground_truth_label']][train][test_inner], tmp_pred.flatten())[0]
                     performance[i, j] += spearman
 
                 elif learn_options['training_metric'] == 'score':
