@@ -104,7 +104,14 @@ def extract_spearman_for_fold(metrics, fold, i, predictions, truth, y_ground_tru
 def get_train_test(test_gene, y_all, train_genes=None):
     # this is a bit convoluted because the train_genes+test_genes may not add up to all genes
     # for e.g. when we load up V3, but then use only V2, etc.
+    is_off_target = 'MutatedSequence' in y_all.index.names
+    if is_off_target:
+        train = (y_all.index.get_level_values('MutatedSequence').values != test_gene)
+        test = None
+        return train, test
+    
     not_test = (y_all.index.get_level_values('Target gene').values != test_gene)
+
     if train_genes is not None:
         in_train_genes = np.zeros(not_test.shape, dtype=bool)
         for t_gene in train_genes:
@@ -149,7 +156,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
     inputs, dim, dimsum, feature_names = util.concatenate_feature_sets(feature_sets)
 
     if not CV:
-        assert learn_options['cv'] == 'gene', 'Can only use gene-CV when CV is False (I need to use all of the genes and stratified complicates that)'
+        assert learn_options['cv'] == 'gene', 'Must use gene-CV when CV is False (I need to use all of the genes and stratified complicates that)'
 
     # set-up for cross-validation
     ## for outer loop, the one Doench et al use genes for
