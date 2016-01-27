@@ -516,137 +516,14 @@ def write_results(predictions, file_to_predict):
     return data, newfile
 
 if __name__ == '__main__':
-    if False:
-        test = True
+    # save_final_model_V3(filename='azimuth/azure_models/V3_model_full.pickle', include_position=True)
+    save_final_model_V3(filename='saved_models/V3_model_nopos_azure.pickle', include_position=False)
+    # predict('GGGCCGCTGTTGCAGGTGGCGGGTAGGATC', 'sense', 1200, 30.3, model_file='../saved_models/final_model_nicolo.pickle')
 
-        learn_options = {"gc_features": True,
-                          "nuc_features": True,
-                          "include_pi_nuc_feat": True,
-                          "include_gene_position": True,
-                          "weighted": None,
-                          "include_NGGX_interaction": True,
-                          "include_Tm": True,
-                          "include_strand": False,
-                          "include_gene_feature": True,
-                          "include_gene_guide_feature": 0,
-                          "extra pairs": False,
-                          #"V": 2,
-                          #"V": 1,
-                          "V": 3,
-                          #'train_genes': pd.V1_genes(), 'test_genes': pd.V1_genes(),
-                          #'train_genes': pd.V2_genes(), 'test_genes': pd.V2_genes(),
-                          #'train_genes': pd.V3_genes(), 'test_genes': pd.V3_genes(),
-                          "testing_non_binary_target_name": 'ranks',
-                          'rank-transformed target name' : 'score_drug_gene_rank',
-                          'binary target name' : 'score_drug_gene_threshold',
-                          "NDGC_k": 10,
-                          "cv": "gene",
-                          "include_gene_effect": False,
-                          "include_drug": False,
-                          "include_sgRNAscore": False,
-                          "num_proc" : 9,
-                          "num_thread_per_proc" : 2,
-                          'seed' : 1,
-                          'num_genes_remove_train' : 0,
-                         }
-
-
-        #for seednum in range(100):
-        #for num_remove in range(8):
-        for num_remove in [0]:
-            learn_options_2 = learn_options.copy()
-            learn_options_2['num_genes_remove_train'] = num_remove
-            #learn_options_2['seed'] = learn_options['seed'] * 2**(seednum+1)
-            #learn_options_2['rank-transformed target name'] = 'score_drug_rank'
-            #learn_options_2['binary target name'] = 'score_drug_threshold'
-            #learn_options_2["target_name"] = learn_options_2['binary target name']
-
-             #set of options each with a string name. each one will be run in turn
-
-             #learn_options_set = {'NP_weighted': learn_options_NP}#, 'NP': learn_options_NP}
-             #learn_options_set = {'tmp': learn_options_tmp}
-             #thiskey = 'V1_num_remove_train_%d' % num_remove
-            thiskey = 'try_models'
-            learn_options_set = {thiskey: learn_options_2}
-            print "working on %s" % thiskey
-             #learn_options_set = {'drug_gene': learn_options, 'drug': learn_options_2}
-
-             #results, all_learn_options = run_models(['linreg', 'L1', 'L2'], orders=[1], test=True, target_name='score')
-             # all_learn_options is similar to (and contains all of_ learn_options_set, but has more
-             # entries populated, by the model specification, etc.
-            results, all_learn_options = run_models(["AdaBoost"], orders=[1], adaboost_learning_rates=[0.1], adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, learn_options_set=learn_options_set, test=test, produce_final_model=True)
-             #results, all_learn_options = run_models([ "AdaBoost"], orders=[2], adaboost_learning_rates=[0.1], adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, learn_options_set=learn_options_set, test=test)
-             # all_metrics, gene_names = util.get_all_metrics(results, test_metrics=['AUC', 'spearmanr'], learn_options_set=learn_options_set)
-             # util.plot_all_metrics(all_metrics, gene_names, all_learn_options, save=True)
-             # plt.close('all')
-    else :
-        learn_options = {"V": 3,
-                "train_genes":  azimuth.load_data.get_V1_genes(),
-                "test_genes": azimuth.load_data.get_V1_genes(),
-                "testing_non_binary_target_name": 'ranks',
-                'include_pi_nuc_feat': True,
-                "gc_features": True,
-                "nuc_features": True,
-                "include_gene_position": True,
-                "include_NGGX_interaction": True,
-                "include_Tm": True,
-                "include_strand": False,
-                "include_gene_feature": False,
-                "include_gene_guide_feature": 0,
-                "extra pairs": False,
-                "weighted": None,
-                "training_metric": 'spearmanr',
-                "NDGC_k": 10,
-                "cv": "gene",
-                "adaboost_loss" : 'ls',
-                "include_gene_effect": False,
-                "include_drug": False,
-                "include_sgRNAscore": False,
-                'num_proc': 1,
-                'num_thread_per_proc': 10,
-                'adaboost_loss' : 'ls', # main "ls", alternatives: "lad", "huber", "quantile", see scikit docs for details
-                'adaboost_alpha': 0.5, # this parameter is only used by the huber and quantile loss functions.
-                'normalize_features': False
-                }
-
-        learn_options_gene = {"V": 3,
-                "train_genes":  azimuth.load_data.get_V3_genes(),
-                "test_genes": azimuth.load_data.get_V3_genes(),
-                "testing_non_binary_target_name": 'ranks',
-                'include_pi_nuc_feat': True,
-                "gc_features": True,
-                "nuc_features": True,
-                "include_gene_position": True,
-                "include_NGGX_interaction": True,
-                "include_Tm": True,
-                "include_strand": False,
-                "include_gene_feature": False,
-                "include_gene_guide_feature": 0,
-                "extra pairs": False,
-                "weighted": None,
-                "training_metric": 'spearmanr',
-                "NDGC_k": 10,
-                "cv": "gene",
-                "adaboost_loss" : 'ls',
-                "include_gene_effect": False,
-                "include_drug": False,
-                "include_sgRNAscore": False,
-                'num_proc': 1,
-                'num_thread_per_proc': 4,
-                'adaboost_loss' : 'ls', # main "ls", alternatives: "lad", "huber", "quantile", see scikit docs for details
-                'adaboost_alpha': 0.5, # this parameter is only used by the huber and quantile loss functions.
-                'normalize_features': False
-                }
-
-        # save_final_model_V3(filename='azimuth/azure_models/V3_model_full.pickle', include_position=True)
-
-        save_final_model_V3(filename='../saved_models/V3_model_nopos.pickle', include_position=False)
-        # predict('GGGCCGCTGTTGCAGGTGGCGGGTAGGATC', 'sense', 1200, 30.3, model_file='../saved_models/final_model_nicolo.pickle')
-
-        # learn_options_set={'V3_on_V3_feat_all': learn_options}
-        # results, all_learn_options = run_models(["SVC"], orders=[1], adaboost_learning_rates=[0.1],
-        #                                         adaboost_max_depths=[3], adaboost_num_estimators=[100],
-        #                                         adaboost_CV=True, learn_options_set=learn_options_set,
-        #                                         test=False, CV=True)
-        # runner(['AdaBoost'], learn_options_set, orders=[2], where='local', adaboost_learning_rates=[0.1],  adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, exp_name='genefeat')
- # #util.feature_importances(results)
+    # learn_options_set={'V3_on_V3_feat_all': learn_options}
+    # results, all_learn_options = run_models(["SVC"], orders=[1], adaboost_learning_rates=[0.1],
+    #                                         adaboost_max_depths=[3], adaboost_num_estimators=[100],
+    #                                         adaboost_CV=True, learn_options_set=learn_options_set,
+    #                                         test=False, CV=True)
+    # runner(['AdaBoost'], learn_options_set, orders=[2], where='local', adaboost_learning_rates=[0.1],  adaboost_max_depths=[3], adaboost_num_estimators=[100], adaboost_CV=False, exp_name='genefeat')
+# #util.feature_importances(results)
