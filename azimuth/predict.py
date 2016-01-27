@@ -31,7 +31,10 @@ def fill_in_truth_and_predictions(truth, predictions, fold, y_all, y_pred, learn
 
 
 def construct_filename(learn_options, TEST):
-    filename = "V%s" % learn_options["V"]
+    if learn_options.has_key("V"):
+        filename = "V%s" % learn_options["V"]
+    else:
+        filename = "offV1"
 
     if TEST:
         filename = "TEST."
@@ -151,7 +154,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
     # set-up for cross-validation
     ## for outer loop, the one Doench et al use genes for
     if learn_options["cv"] == "stratified":
-        assert not learn_options['extra pairs'], "can't use extra pairs with stratified CV, need to figure out how to properly account for genes affected by two drugs"
+        assert not learn_options.has_key("extra_pairs") or learn_options['extra pairs'], "can't use extra pairs with stratified CV, need to figure out how to properly account for genes affected by two drugs"
         label_encoder = sklearn.preprocessing.LabelEncoder()
         label_encoder.fit(y_all['Target gene'].values)
         gene_classes = label_encoder.transform(y_all['Target gene'].values)
@@ -226,7 +229,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
 
     #do the cross-validation
     num_proc = learn_options["num_proc"]
-    if num_proc>1:
+    if num_proc > 1:
         num_proc = np.min([num_proc,len(cv)])
         print "using multiprocessing with %d procs--one for each fold" % num_proc
         jobs = []
