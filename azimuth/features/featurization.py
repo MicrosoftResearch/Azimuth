@@ -144,8 +144,8 @@ def countGC(s):
     '''
     GC content for only the 20mer, as per the Doench paper/code
     '''
-    assert len(s) == 30, "seems to assume 30mer"
-    return len(s[5:25].replace('A', '').replace('T', ''))
+    assert len(s) == 30, "seems to assume 30mer"    
+    return len(s[4:24].replace('A', '').replace('T', ''))
 
 
 def SeqUtilFeatures(data):
@@ -351,9 +351,10 @@ def Tm_feature(data, pam_audit=True):
             raise Exception("expected GG but found %s" % seq[25:27])
         rna = False
         featarray[i,0] = Tm.Tm_staluc(seq, rna=rna)        #30mer Tm
-        featarray[i,1] = Tm.Tm_staluc(seq[20:25], rna=rna) #5nts immediately proximal of the NGG PAM
-        featarray[i,2] = Tm.Tm_staluc(seq[12:20], rna=rna)   #8-mer
-        featarray[i,3] = Tm.Tm_staluc(seq[7:12], rna=rna)      #5-mer
+        featarray[i,1] = Tm.Tm_staluc(seq[19:24], rna=rna) #5nts immediately proximal of the NGG PAM
+        featarray[i,2] = Tm.Tm_staluc(seq[11:19], rna=rna)   #8-mer
+        featarray[i,3] = Tm.Tm_staluc(seq[6:11], rna=rna)      #5-mer
+
 
     feat = pandas.DataFrame(featarray, index=data.index, columns=["Tm global_%s" % rna, "5mer_end_%s" %rna, "8mer_middle_%s" %rna, "5mer_start_%s" %rna])
 
