@@ -123,9 +123,9 @@ def combine_organisms(human_data, mouse_data):
     return X, Y
 
 
-def read_V1_data(data_file, learn_options, AML_file="../data/AML_EL4_PercentRank_0725.txt"):
+def read_V1_data(data_file, learn_options, AML_file="../../data/AML_EL4_PercentRank_0725.txt"):
     if data_file is None:
-        data_file = "../data/07-23 Data for Jennifer.xlsx"
+        data_file = "../../data/07-23 Data for Jennifer.xlsx"
     human_data = pandas.read_excel(data_file, sheetname=0, index_col=[0, 1])
     mouse_data = pandas.read_excel(data_file, sheetname=1, index_col=[0, 1])
     Xdf, Y = combine_organisms(human_data, mouse_data)
@@ -222,7 +222,7 @@ def read_xu_et_al(data_file, learn_options=None, verbose=True, subsetting='ours'
 
 def read_V2_data(data_file, learn_options=None, verbose=True):
     if data_file is None:
-        data_file = "../data/11-15-2014 DeepXPR results_processed.xlsx"
+        data_file = "../../data/11-15-2014 DeepXPR results_processed.xlsx"
 
     # to compare
     # import predict as pr; a1, g1, t1, X1, Y1 = pr.data_setup()

@@ -25,7 +25,7 @@ import sys
 import pandas as pd
 
 def get_pval_from_predictions(m0_predictions, m1_predictions, ground_truth, twotailed=False, method='steiger'):
-    '''    
+    '''
     If twotailed==False, then need to check that the one of corr0 and corr1 that is higher is the correct one
     '''
     import corrstats
@@ -51,22 +51,23 @@ def get_thirty_one_mer_data():
     data = pd.read_csv(myfile)
     thirty_one_mer = []
     for i in range(data.shape[0]):
-        thirty_one_mer.append(convert_to_thirty_one(data.iloc[i]["30mer"], data.iloc[i]["Target"], data.iloc[i]["Strand"]))  
+        thirty_one_mer.append(convert_to_thirty_one(data.iloc[i]["30mer"], data.iloc[i]["Target"], data.iloc[i]["Strand"]))
     data["31mer"] = thirty_one_mer
     data.to_csv(newfile)
-    
+
 
 def guide_positional_features(guide_seq, gene, strand):
-    '''
+    """
     Given a guide sequence, a gene name, and strand (e.g. "sense"), return the (absolute) nucleotide cut position, and the percent amino acid.
     From John's email:
     the cut site is always 3nts upstream of the NGG PAM:
     5' - 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 <cut> 18 19 20 N G G - 3'
     To calculate percent protein, we determined what amino acid number was being cut and just divided by the total number of amino acids. In the case where the cutsite was between two amino acid codons, I believe we rounded down
 
-    '''
+    """
+
     guide_seq = Seq.Seq(guide_seq)
-    gene_seq = Seq.Seq(util.get_gene_sequence(gene)).reverse_complement()    
+    gene_seq = Seq.Seq(util.get_gene_sequence(gene)).reverse_complement()
     if strand=='sense':
         guide_seq = guide_seq.reverse_complement()
     ind = gene_seq.find(guide_seq)
@@ -81,11 +82,11 @@ def guide_positional_features(guide_seq, gene, strand):
 
 def convert_to_thirty_one(guide_seq, gene, strand):
     '''
-    Given a guide sequence, a gene name, and strand (e.g. "sense"), return a 31mer string which is our 30mer, 
+    Given a guide sequence, a gene name, and strand (e.g. "sense"), return a 31mer string which is our 30mer,
     plus one more at the end.
     '''
     guide_seq = Seq.Seq(guide_seq)
-    gene_seq = Seq.Seq(get_gene_sequence(gene)).reverse_complement()    
+    gene_seq = Seq.Seq(get_gene_sequence(gene)).reverse_complement()
     if strand=='sense':
         guide_seq = guide_seq.reverse_complement()
     ind = gene_seq.find(guide_seq)
@@ -96,7 +97,7 @@ def convert_to_thirty_one(guide_seq, gene, strand):
     #new_mer = gene_seq[ind:(ind+len(guide_seq))+1] #looks correct, but is wrong, due to strand frame-of-reference
     new_mer = gene_seq[(ind-1):(ind+len(guide_seq))] #this actually tacks on an extra one at the end for some reason
     if strand=='sense':
-        new_mer = new_mer.reverse_complement()    
+        new_mer = new_mer.reverse_complement()
     return str(new_mer)
 
 def concatenate_feature_sets(feature_sets):
@@ -135,16 +136,16 @@ def extract_individual_level_data(one_result):
     assumes that results here is the value for a results dictionary for one key, i.e. one entry in a dictionary loaded up from saved results with pickle
     e.g. all_results, all_learn_options = pickle.load(some_results_file)
     then call extract_individual_level_data(one_results = all_results['firstkey'])
-    then, one_results contains: metrics, gene_pred, fold_labels, m, dimsum, filename, feature_names        
-    '''    
+    then, one_results contains: metrics, gene_pred, fold_labels, m, dimsum, filename, feature_names
+    '''
     metrics, gene_pred, fold_labels, m, dimsum, filename, feature_names  = one_result
     all_true_ranks = np.empty(0)
     all_pred = np.empty(0)
-    for f in list(fold_labels):        
+    for f in list(fold_labels):
         these_ranks = gene_pred[0][0][f]['ranks'] #similar for thrs
         these_pred =  gene_pred[0][1][f]
         all_true_ranks = np.concatenate((all_true_ranks, these_ranks))
-        all_pred = np.concatenate((all_pred, these_pred))            
+        all_pred = np.concatenate((all_pred, these_pred))
     return all_true_ranks, all_pred
 
 def spearmanr_nonan(x,y):
@@ -286,9 +287,10 @@ def get_ranks(y, thresh=0.8, prefix="", flip=False, col_name='score'):
     assert ~np.any(np.isnan(y_rank)), "found NaN ranks"
 
     # divides into quantiles, but not used:
-    y_quantized = pandas.DataFrame(pandas.qcut(y[col_name], 5, labels=np.arange(5.0)).astype(float)) # quantized vector
+    # y_quantized = pandas.DataFrame(data=pandas.qcut(y[col_name], 5, labels=np.arange(5.0))) # quantized vector
+    y_quantized = y_threshold.copy()
     y_quantized.columns = [prefix + "quantized"]
-
+    
     return y_rank, y_rank_raw, y_threshold, y_quantized
 
 def get_data(data, y_names, organism="human", target_gene=None):
@@ -348,7 +350,7 @@ def get_data(data, y_names, organism="human", target_gene=None):
     features['Target gene'] = target_gene
     features['Organism'] = organism
     features['Strand'] = pandas.DataFrame(data['Strand'])
-    
+
     return features, outputs
 
 
@@ -479,21 +481,21 @@ def ndcgk(relevances, rank=20):
         return 0.
     return dcg(relevances, rank) / best_dcg
 
-def extract_feature_from_model(method, results, split):    
+def extract_feature_from_model(method, results, split):
     model_type = results[method][3][split]
-    if isinstance(model_type, sklearn.linear_model.coordinate_descent.ElasticNet):        
-        tmp_imp = results[method][3][split].coef_[:, None]        
-    elif isinstance(model_type, sklearn.ensemble.GradientBoostingRegressor):      
-        tmp_imp = results[method][3][split].feature_importances_[:, None]        
+    if isinstance(model_type, sklearn.linear_model.coordinate_descent.ElasticNet):
+        tmp_imp = results[method][3][split].coef_[:, None]
+    elif isinstance(model_type, sklearn.ensemble.GradientBoostingRegressor):
+        tmp_imp = results[method][3][split].feature_importances_[:, None]
     else:
         raise Exception("need to add model %s to feature extraction" % model_type)
     return tmp_imp
 
-def extract_feature_from_model_sum(method, results, split, indexes):    
+def extract_feature_from_model_sum(method, results, split, indexes):
     model_type = results[method][3][split]
     if isinstance(model_type, sklearn.linear_model.coordinate_descent.ElasticNet):
        tmp_imp = np.sum(results[method][3][split].coef_[indexes])
-    elif isinstance(model_type, sklearn.ensemble.GradientBoostingRegressor):      
+    elif isinstance(model_type, sklearn.ensemble.GradientBoostingRegressor):
        tmp_imp = np.sum(results[method][3][split].feature_importances_[indexes])
     else:
         raise Exception("need to add model %s to feature extraction" % model_type)
@@ -534,7 +536,7 @@ def feature_importances(results, fontsize=16, figsize=(14, 8)):
                 continue
             else:
                 for split in results[method][3].keys():
-                    split_feat_importance = extract_feature_from_model_sum(method, results, split, grouped_feat[k])                      
+                    split_feat_importance = extract_feature_from_model_sum(method, results, split, grouped_feat[k])
                     if k not in feature_importances_grouped:
                         feature_importances_grouped[k] = [split_feat_importance]
                     else:
@@ -542,7 +544,7 @@ def feature_importances(results, fontsize=16, figsize=(14, 8)):
 
         all_split_importances = None
         for split in results[method][3].keys():
-            
+
             split_feat_importance = extract_feature_from_model(method, results, split)
 
             if all_split_importances is None:
@@ -553,7 +555,7 @@ def feature_importances(results, fontsize=16, figsize=(14, 8)):
         avg_importance = np.mean(all_split_importances, axis=1)[:, None]
         std_importance = np.std(all_split_importances, axis=1)[:, None]
         imp_array = np.concatenate((np.array(feature_names)[:, None], avg_importance, std_importance), axis=1)
-        
+
         df = pandas.DataFrame(data=imp_array, columns=['Feature name', 'Mean feature importance', 'Std. Dev.'])
         df = df.convert_objects(convert_numeric=True)
 
@@ -776,7 +778,7 @@ def plot_all_metrics(metrics, gene_names, all_learn_options, save, plots=None, b
         if save == True:
             plt.xticks(ind+0.5, gene_names)
             if metric=='AUC':
-                plt.ylim([0.5, 1.0])                
+                plt.ylim([0.5, 1.0])
             plt.savefig(basefile + "_" + metric + "_bar" + ".png")
 
         if (plots == None or "boxplots" in plots) and 'global' not in metric:
@@ -799,18 +801,18 @@ def load_results(directory, all_results, all_learn_options, model_filter=None, a
     '''
     Only load up files which contain one of the strings in model_filter in their names
     model_filter should be a list, or a string
-    '''    
+    '''
     num_added = 0
     filelist = glob.glob(directory+'\\*.pickle')
     if filelist ==[]:
         raise Exception("found no pickle files in %s" % directory)
     else:
         print "found %d files in %s" % (len(filelist), directory)
-    
+
     for results_file in filelist:
         if 'learn_options' in results_file:
             continue
-        
+
         if model_filter != None:
             if isinstance(model_filter, list):
                 in_filt = False
@@ -822,13 +824,13 @@ def load_results(directory, all_results, all_learn_options, model_filter=None, a
                     continue
             elif model_filter not in results_file:
                 continue
-                
+
         try:
             with open(results_file, 'rb') as f:
                 results, learn_options = pickle.load(f)
             gene_names = None
-        except:            
-            with open(results_file, 'rb') as f:                
+        except:
+            with open(results_file, 'rb') as f:
                 # this is when I accidentally saved from the plotting routine and should not generally be needed
                 results, learn_options, gene_names = pickle.load(f)
 
@@ -844,8 +846,8 @@ def load_results(directory, all_results, all_learn_options, model_filter=None, a
             num_added = num_added +1
 
     if num_added==0:
-        raise Exception("found no files to add from dir=%s" % directory)        
-        
+        raise Exception("found no files to add from dir=%s" % directory)
+
     return all_results, all_learn_options
 
 def plot_cluster_results(metrics=['spearmanr', 'NDCG@5'], plots=['boxplots'], directory=r'\\fusi1\crispr2\analysis\cluster\results', results=None, learn_options=None, filter=None):
@@ -992,7 +994,7 @@ def plot_old_vs_new_feat(results, models, fontsize=20, filename=None, print_outp
     print "old features"
     print "mean: " + str(base_spearman_means)
     print "std: " + str(base_spearman_std)
-        
+
     print "old + new features"
     print "mean: " + str(feat_spearman_means)
     print "std: " + str(feat_spearman_std)
@@ -1040,11 +1042,11 @@ def remove_top_right_on_plot(ax=None):
     ax.yaxis.set_ticks_position('left')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    
+
 
 if __name__ == '__main__':
     get_thirty_one_mer_data(); import ipdb; ipdb.set_trace()
-    
+
     # v3_v3_a_feat = 'tests/ens/'
     # v3_v3_d_feat = 'tests/ens2/'
     # # v3_v3_a_feat = r'\\fusi1\crispr2\analysis\cluster\results\cluster_experiment_flmrsw'
