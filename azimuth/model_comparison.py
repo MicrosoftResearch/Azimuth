@@ -492,6 +492,7 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     this is useful if predicting on PAM mismatches, such as with off-target
     """
     # assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
+    assert (isinstance(seq, str) or isinstance(seq, unicode)), "Please ensure input sequences are in string format, i.e. 'AGAG' rather than ['A' 'G' 'A' 'G'] or alternate representations"
     print aa_cut, percent_peptide
     if model_file is None:
         azimuth_saved_model_dir = os.path.join(os.path.dirname(azimuth.__file__), 'saved_models')
