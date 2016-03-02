@@ -10,7 +10,7 @@ import Bio.SeqUtils.MeltingTemp as Tm
 import pickle
 import itertools
 
-def featurize_data(data, learn_options, Y, gene_position, pam_audit=True):
+def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length_audit=True):
     '''
     assumes that data contains the 30mer
     returns set of features from which one can make a kernel for each one
@@ -26,7 +26,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True):
         get_all_order_nuc_features(data['30mer'], feature_sets, learn_options, learn_options["order"], max_index_to_use=30)
 
     if learn_options["gc_features"]:
-        gc_above_10, gc_below_10, gc_count = gc_features(data)
+        gc_above_10, gc_below_10, gc_count = gc_features(data, length_audit)
         feature_sets['gc_above_10'] = pandas.DataFrame(gc_above_10)
         feature_sets['gc_below_10'] = pandas.DataFrame(gc_below_10)
         feature_sets['gc_count'] = pandas.DataFrame(gc_count)
@@ -140,11 +140,12 @@ def get_all_order_nuc_features(data, feature_sets, learn_options, maxorder, max_
         print "\t\t\t\t\t\t\tdone"
 
 
-def countGC(s):
+def countGC(s, length_audit=True):
     '''
     GC content for only the 20mer, as per the Doench paper/code
     '''
-    assert len(s) == 30, "seems to assume 30mer"    
+    if length_audit:
+        assert len(s) == 30, "seems to assume 30mer"    
     return len(s[4:24].replace('A', '').replace('T', ''))
 
 
@@ -360,8 +361,8 @@ def Tm_feature(data, pam_audit=True):
 
     return feat
 
-def gc_features(data):
-    gc_count = data['30mer'].apply(countGC)
+def gc_features(data, audit=True):
+    gc_count = data['30mer'].apply(lambda seq: countGC(seq, audit))
     gc_count.name = 'GC count'
     gc_above_10 = (gc_count > 10)*1
     gc_above_10.name = 'GC > 10'

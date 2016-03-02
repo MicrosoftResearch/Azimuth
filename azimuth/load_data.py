@@ -160,13 +160,13 @@ def read_V1_data(data_file, learn_options, AML_file="../../data/AML_EL4_PercentR
 
     return annotations, gene_position, target_genes, Xdf, Y
 
+def rank_transform(x):
+    return 1.0 - sp.stats.mstats.rankdata(x)/sp.stats.mstats.rankdata(x).max()
 
 def read_xu_et_al(data_file, learn_options=None, verbose=True, subsetting='ours'):
     if data_file is None:
         data_file = '../data/xu_et_al_data.xlsx'
-
-    rank_transform = lambda x: 1.0 - sp.stats.mstats.rankdata(x)/sp.stats.mstats.rankdata(x).max()
-
+            
     datasets = ['ribo', 'non_ribo', 'mESC']
     aggregated = None
     
