@@ -520,10 +520,12 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     assert isinstance(seq, (str, np.ndarray)), "Please ensure seq is a numpy array"
     if isinstance(seq, np.ndarray) and len(seq) > 0:
         assert isinstance(seq[0], str) or isinstance(seq[0], unicode), "Please ensure input sequences are in string format, i.e. 'AGAG' rather than ['A' 'G' 'A' 'G'] or alternate representations"
-    assert isinstance(aa_cut, (int, long, np.ndarray)), "Please ensure aa_cut is a numpy array"
+    if aa_cut is not None: 
+        assert isinstance(aa_cut, (int, long, np.ndarray)), "Please ensure aa_cut is a numpy array"
     if isinstance(aa_cut, np.ndarray) and len(aa_cut) > 0:
         assert isinstance(aa_cut[0], (int, long))
-    assert isinstance(percent_peptide, (int, long, np.ndarray)), "Please ensure percent_peptide is a numpy array"
+    if percent_peptide is not None:
+        assert isinstance(percent_peptide, (int, long, np.ndarray)), "Please ensure percent_peptide is a numpy array"
     if isinstance(percent_peptide, np.ndarray) and len(percent_peptide) > 0:
         assert isinstance(percent_peptide[0], (int, long))
         
