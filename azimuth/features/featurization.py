@@ -20,7 +20,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     t0 = time.time()
 
     feature_sets = {}
-
+    
     if learn_options["nuc_features"]:
         # spectrum kernels (position-independent) and weighted degree kernels (position-dependent)
         get_all_order_nuc_features(data['30mer'], feature_sets, learn_options, learn_options["order"], max_index_to_use=30)
@@ -90,7 +90,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     print "\t\tElapsed time for constructing features is %.2f seconds" % (t1-t0)
 
     check_feature_set_dimensions(feature_sets)
-
+    
     if learn_options['normalize_features']:
         feature_sets = normalize_feature_sets(feature_sets)
         check_feature_set_dimensions(feature_sets)
@@ -108,6 +108,7 @@ def check_feature_set_dimensions(feature_sets):
         if N is None:
             N = N2
         else:
+            assert N >= 1, "should be at least one individual"
             assert N == N2, "# of individuals do not match up across feature sets"
 
 

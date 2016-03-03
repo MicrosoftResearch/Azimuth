@@ -124,7 +124,8 @@ def concatenate_feature_sets(feature_sets):
         dimsum += dim[set]
         inputs = np.hstack((inputs, inputs_set))
         feature_names.extend(feature_sets[set].columns.tolist())
-
+            
+    #for j in feature_sets.keys(): print j + str(feature_sets[j].shape)
     return inputs, dim, dimsum, feature_names
 
 

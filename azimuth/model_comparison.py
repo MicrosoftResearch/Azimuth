@@ -238,7 +238,7 @@ def shared_setup(learn_options, order, test):
     
     return num_proc
 
-def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=True):
+def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=True, length_audit=True):
 
     num_proc = shared_setup(learn_options, order, test)
 
@@ -262,7 +262,11 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
         # Y = Y[to_keep]
         Xdf["30mer"] = Xdf["30mer"].apply(lambda x: x[1:]) # chop the first nucleotide
 
-    feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position, pam_audit)
+    if learn_options.has_key('left_right_guide_ind') and learn_options['left_right_guide_ind'] is not None:
+        seq_start, seq_end = learn_options['left_right_guide_ind']        
+        Xdf['30mer'] = Xdf['30mer'].apply(lambda seq: seq[seq_start:seq_end])
+    
+    feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position, pam_audit=pam_audit, length_audit=length_audit)
     np.random.seed(learn_options['seed'])
 
     return Y, feature_sets, target_genes, learn_options, num_proc
@@ -270,7 +274,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
 
 def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_degrees=[3],
                adaboost_learning_rates=[0.1], adaboost_num_estimators=[100], adaboost_max_depths=[3],
-               learn_options_set=None, test=False, CV=True, setup_function=setup, set_target_fn=set_target):
+               learn_options_set=None, test=False, CV=True, setup_function=setup, set_target_fn=set_target, pam_audit=True, length_audit=True):
 
     '''
     CV is set to false if want to train a final model and not cross-validate, but it goes in to what
@@ -303,7 +307,8 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
             if model in feat_models_short.keys():
                 for order in orders:
                     print "running %s, order %d for %s" % (model, order, learn_options_str)
-                    Y, feature_sets, target_genes, learn_options, num_proc = setup_function(test=test, order=order, learn_options=partial_learn_opt) # TODO precompute features for all orders, as this is repated for each model
+                    
+                    Y, feature_sets, target_genes, learn_options, num_proc = setup_function(test=test, order=order, learn_options=partial_learn_opt, pam_audit=pam_audit, length_audit=length_audit) # TODO precompute features for all orders, as this is repated for each model
 
                     if model == 'L1':
                         learn_options_model = L1_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
@@ -341,7 +346,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
             else:
                 assert setup_fn==setup, "not yet modified to handle this"
                 print "running %s for %s" % (model, learn_options_str)
-                Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=1, learn_options=partial_learn_opt)
+                Y, feature_sets, target_genes, learn_options, num_proc = setup(test=test, order=1, learn_options=partial_learn_opt, pam_audit=pam_audit, length_audit=length_audit)
                 if model == 'mean':
                     learn_options_model = mean_setup(copy.deepcopy(learn_options))
                 elif model == 'random':
@@ -409,6 +414,26 @@ def runner(models, learn_options, GP_likelihoods=None, orders=None, WD_kernel_de
 
         return tempdir, clust_filename, user#, stdout, stderr
 
+
+def save__model_V3(filename, learn_options, short_name, pam_audit=True, length_audit=True):
+    '''
+    run_models(produce_final_model=True) is what saves the model
+    '''
+    test = False
+    assert filename is not None, "need to provide filename to save final model"
+    
+    learn_options_set = {short_name: learn_options}
+    
+    results, all_learn_options = run_models(["AdaBoost"], orders=[2], adaboost_learning_rates=[0.1],
+                                            adaboost_max_depths=[3], adaboost_num_estimators=[100],
+                                            learn_options_set=learn_options_set,
+                                            test=test, CV=False,pam_audit=pam_audit, length_audit=length_audit)
+    model = results.values()[0][3][0]
+
+    with open(filename, 'wb') as f:
+        pickle.dump((model, learn_options), f, -1)
+
+    return model
 
 def save_final_model_V3(filename=None, include_position=True):
     '''
