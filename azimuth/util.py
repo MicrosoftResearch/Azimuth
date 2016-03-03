@@ -128,7 +128,7 @@ def concatenate_feature_sets(feature_sets):
     if False:
         inputs.shape
         for j in feature_sets.keys(): print j + str(feature_sets[j].shape)
-        import ipdb; ipdb.set_trace()    
+        import ipdb; ipdb.set_trace()        
     return inputs, dim, dimsum, feature_names
 
 

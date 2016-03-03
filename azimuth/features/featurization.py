@@ -92,6 +92,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     check_feature_set_dimensions(feature_sets)
     
     if learn_options['normalize_features']:
+        assert("should not be here as doesn't make sense when we make one-off predictions, but could make sense for internal model comparisons when using regularized models")
         feature_sets = normalize_feature_sets(feature_sets)
         check_feature_set_dimensions(feature_sets)
 
