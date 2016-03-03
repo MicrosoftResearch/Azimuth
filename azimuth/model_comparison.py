@@ -511,7 +511,7 @@ def save_final_model_V3(filename=None, include_position=True):
     return model
 
 
-def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam_audit=True):
+def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam_audit=True, length_audit=False):
     """
     if pam_audit==False, then it will not check for GG in the expected position
     this is useful if predicting on PAM mismatches, such as with off-target
@@ -528,9 +528,6 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
         assert isinstance(percent_peptide, (int, long, np.ndarray)), "Please ensure percent_peptide is a numpy array"
     if isinstance(percent_peptide, np.ndarray) and len(percent_peptide) > 0:
         assert isinstance(percent_peptide[0], (int, long))
-        
-    
-    
     
     print aa_cut, percent_peptide
     if model_file is None:
@@ -561,8 +558,8 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
         gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(percent_peptide, aa_cut))
     else:
         gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(np.ones(seq.shape[0])*-1, np.ones(seq.shape[0])*-1))
-
-    feature_sets = feat.featurize_data(Xdf, learn_options, pandas.DataFrame(), gene_position, pam_audit)
+            
+    feature_sets = feat.featurize_data(Xdf, learn_options, pandas.DataFrame(), gene_position, pam_audit=pam_audit, length_audit=length_audit)
     inputs, dim, dimsum, feature_names = azimuth.util.concatenate_feature_sets(feature_sets)
 
     # call to scikit-learn, returns a vector of predicted values
