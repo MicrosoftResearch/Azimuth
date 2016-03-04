@@ -163,11 +163,11 @@ def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate
     if 'adaboost_alpha' not in learn_options.keys():
         learn_options['adaboost_alpha'] = 0.5 # this parameter is only used by the huber and quantile loss functions.
 
-    if not learn_options['adaboost_CV']:        
+    if not learn_options['adaboost_CV']:
         learn_options['adaboost_learning_rate'] = learning_rate
         learn_options['adaboost_n_estimators'] = num_estimators
         learn_options['adaboost_max_depth'] = max_depth
-    else:        
+    else:
         learn_options['adaboost_n_estimators'] = num_estimators
 
     return learn_options
@@ -178,64 +178,64 @@ def shared_setup(learn_options, order, test):
         learn_options['num_proc'] = None
     if 'num_thread_per_proc' not in learn_options.keys():
         learn_options['num_thread_per_proc'] = None
-    
+
     num_proc = azimuth.local_multiprocessing.configure(TEST=test, num_proc=learn_options["num_proc"],
                                                 num_thread_per_proc=learn_options["num_thread_per_proc"])
     learn_options["num_proc"] = num_proc
-    
+
     learn_options["order"] = order  # gets used many places in code, not just here
-    
+
     if "cv" not in learn_options.keys():
         # if no CV preference is specified, use leave-one-gene-out
         learn_options["cv"] = "gene"
-    
+
     if "normalize_features" not in learn_options.keys():
         # if no CV preference is specified, use leave-one-gene-out
         learn_options["normalize_features"] = True
-    
+
     if "weighted" not in learn_options.keys():
         learn_options['weighted'] = None
-    
+
     if "all pairs" not in learn_options.keys():
         learn_options["all pairs"] = False
-    
+
     if "include_known_pairs" not in learn_options.keys():
         learn_options["include_known_pairs"] = False
-    
+
     if "include_gene_guide_feature" not in learn_options.keys():
         learn_options["include_gene_guide_feature"] = 0 #used as window size, so 0 is none
-    
+
     #these should default to true to match experiments before they were options:
     if "gc_features" not in learn_options.keys():
         learn_options["gc_features"] = True
     if "nuc_features" not in learn_options.keys():
         learn_options["nuc_features"] = True
-    
+
     if 'train_genes' not in learn_options.keys():
         learn_options["train_genes"] = None
     if 'test_genes' not in learn_options.keys():
         learn_options["test_genes"] = None
-    
+
     if "num_proc" not in learn_options:
         learn_options["num_proc"] = None
     if "num_thread_per_proc" not in learn_options:
         learn_options["num_thread_per_proc"] = None
-    
+
     if 'seed' not in learn_options:
         learn_options['seed'] = 1
-    
+
     if "flipV1target" not in learn_options:
         learn_options["flipV1target"] = False
-    
+
     if 'num_genes_remove_train' not in learn_options:
         learn_options['num_genes_remove_train'] = None
-    
+
     if "include_microhomology" not in learn_options:
-        learn_options["include_microhomology"] = False   
-        
+        learn_options["include_microhomology"] = False
+
     if "algorithm_hyperparam_search" not in learn_options:
         learn_options["algorithm_hyperparam_search"] = "grid" # other options is bo for bayesian optimization
-    
+
     return num_proc
 
 def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=True, length_audit=True):
@@ -245,7 +245,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
     assert "testing_non_binary_target_name" in learn_options.keys(), "need this in order to get metrics, though used to be not needed, so you may newly see this error"
     if learn_options["testing_non_binary_target_name"] not in ['ranks', 'raw', 'thrs']:
         raise Exception('learn_otions["testing_non_binary_target_name"] must be in ["ranks", "raw", "thrs"]')
-    
+
     Xdf, Y, gene_position, target_genes = azimuth.load_data.from_file(data_file, learn_options)
     learn_options['all_genes'] = target_genes
 
@@ -263,9 +263,9 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
         Xdf["30mer"] = Xdf["30mer"].apply(lambda x: x[1:]) # chop the first nucleotide
 
     if learn_options.has_key('left_right_guide_ind') and learn_options['left_right_guide_ind'] is not None:
-        seq_start, seq_end = learn_options['left_right_guide_ind']        
+        seq_start, seq_end = learn_options['left_right_guide_ind']
         Xdf['30mer'] = Xdf['30mer'].apply(lambda seq: seq[seq_start:seq_end])
-    
+
     feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position, pam_audit=pam_audit, length_audit=length_audit)
     np.random.seed(learn_options['seed'])
 
@@ -296,7 +296,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
         print "Received option CV=False, so I'm training using all of the data"
         assert len(learn_options_set.keys()) == 1, "when CV is False, only 1 set of learn options is allowed"
         assert len(models) == 1, "when CV is False, only 1 model is allowed"
-                    
+
 
     for learn_options_str in learn_options_set.keys():
         # these options get augmented in setup
@@ -307,7 +307,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
             if model in feat_models_short.keys():
                 for order in orders:
                     print "running %s, order %d for %s" % (model, order, learn_options_str)
-                    
+
                     Y, feature_sets, target_genes, learn_options, num_proc = setup_function(test=test, order=order, learn_options=partial_learn_opt, pam_audit=pam_audit, length_audit=length_audit) # TODO precompute features for all orders, as this is repated for each model
 
                     if model == 'L1':
@@ -496,19 +496,21 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     this is useful if predicting on PAM mismatches, such as with off-target
     """
     # assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
-    assert isinstance(seq, (str, np.ndarray)), "Please ensure seq is a numpy array"
-    if isinstance(seq, np.ndarray) and len(seq) > 0:
-        assert isinstance(seq[0], str) or isinstance(seq[0], unicode), "Please ensure input sequences are in string format, i.e. 'AGAG' rather than ['A' 'G' 'A' 'G'] or alternate representations"
-    if aa_cut is not None: 
-        assert isinstance(aa_cut, (int, long, np.ndarray)), "Please ensure aa_cut is a numpy array"
-    if isinstance(aa_cut, np.ndarray) and len(aa_cut) > 0:
-        assert isinstance(aa_cut[0], (int, long))
+    assert isinstance(seq, (np.ndarray)), "Please ensure seq is a numpy array"
+    assert len(seq[0]) > 0, "Make sure that seq is not empty"
+    assert isinstance(seq[0], str), "Please ensure input sequences are in string format, i.e. 'AGAG' rather than ['A' 'G' 'A' 'G'] or alternate representations"
+
+    if aa_cut is not None:
+        assert len(aa_cut) > 0, "Make sure that aa_cut is not empty"
+        assert isinstance(aa_cut, (np.ndarray)), "Please ensure aa_cut is a numpy array"
+        assert np.all(np.isreal(aa_cut)), "amino-acid cut position needs to be a real number"
+
     if percent_peptide is not None:
-        assert isinstance(percent_peptide, (int, long, np.ndarray)), "Please ensure percent_peptide is a numpy array"
-    if isinstance(percent_peptide, np.ndarray) and len(percent_peptide) > 0:
-        assert isinstance(percent_peptide[0], (int, long))
-    
-    print aa_cut, percent_peptide
+        assert len(percent_peptide) > 0, "Make sure that percent_peptide is not empty"
+        assert isinstance(percent_peptide, (np.ndarray)), "Please ensure percent_peptide is a numpy array"
+        assert np.all(np.isreal(percent_peptide)), "percent_peptide needs to be a real number"
+
+
     if model_file is None:
         azimuth_saved_model_dir = os.path.join(os.path.dirname(azimuth.__file__), 'saved_models')
         if np.any(percent_peptide == -1) or (percent_peptide is None and aa_cut is None):
@@ -537,7 +539,7 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
         gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(percent_peptide, aa_cut))
     else:
         gene_position = pandas.DataFrame(columns=[u'Percent Peptide', u'Amino Acid Cut position'], data=zip(np.ones(seq.shape[0])*-1, np.ones(seq.shape[0])*-1))
-            
+
     feature_sets = feat.featurize_data(Xdf, learn_options, pandas.DataFrame(), gene_position, pam_audit=pam_audit, length_audit=length_audit)
     inputs, dim, dimsum, feature_names = azimuth.util.concatenate_feature_sets(feature_sets)
 
@@ -556,10 +558,10 @@ def write_results(predictions, file_to_predict):
 
 if __name__ == '__main__':
     #save_final_model_V3(filename='azimuth/azure_models/V3_model_full.pickle', include_position=True)
-    
+
     save_final_model_V3(filename='saved_models/V3_model_nopos.pickle', include_position=False)
     save_final_model_V3(filename='saved_models/V3_model_full.pickle', include_position=True)
-    
+
     # predict('GGGCCGCTGTTGCAGGTGGCGGGTAGGATC', 'sense', 1200, 30.3, model_file='../saved_models/final_model_nicolo.pickle')
 
 
@@ -570,18 +572,18 @@ if __name__ == '__main__':
                 "testing_non_binary_target_name": 'ranks',
                 'include_pi_nuc_feat': True,
                 "gc_features": True,
-                "nuc_features": True,            
-                "include_gene_position": True,                    
+                "nuc_features": True,
+                "include_gene_position": True,
                 "include_NGGX_interaction": True,
                 "include_Tm": True,
                 "include_strand": False,
                 "include_gene_feature": False,
-                "include_gene_guide_feature": 0,                          
+                "include_gene_guide_feature": 0,
                 "extra pairs": False,
-                "weighted": None,            
+                "weighted": None,
                 "training_metric": 'spearmanr',
                 "NDGC_k": 10,
-                "cv": "gene",    
+                "cv": "gene",
                 "adaboost_loss" : 'ls',
                 "include_gene_effect": False,
                 "include_drug": False,
@@ -589,7 +591,7 @@ if __name__ == '__main__':
                 'adaboost_loss' : 'ls', # main "ls", alternatives: "lad", "huber", "quantile", see scikit docs for details
                 'adaboost_alpha': 0.5, # this parameter is only used by the huber and quantile loss functions.
                 'adaboost_CV' : False
-                } 
+                }
 
     learn_options_set = {"post bug fix":learn_options}
 
