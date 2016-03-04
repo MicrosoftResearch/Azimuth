@@ -414,7 +414,7 @@ def runner(models, learn_options, GP_likelihoods=None, orders=None, WD_kernel_de
 
         return tempdir, clust_filename, user#, stdout, stderr
 
-def save_final_model_V3(filename=None, include_position=True, learn_options=None):
+def save_final_model_V3(filename=None, include_position=True, learn_options=None, short_name='final', pam_audit=True, length_audit=True):
     '''
     run_models(produce_final_model=True) is what saves the model
     '''
@@ -477,11 +477,11 @@ def save_final_model_V3(filename=None, include_position=True, learn_options=None
                  'adaboost_CV' : False
                 }
 
-    learn_options_set = {'final': learn_options}
+    learn_options_set = {short_name: learn_options}
     results, all_learn_options = run_models(["AdaBoost"], orders=[2], adaboost_learning_rates=[0.1],
                                             adaboost_max_depths=[3], adaboost_num_estimators=[100],
                                             learn_options_set=learn_options_set,
-                                            test=test, CV=False)
+                                            test=test, CV=False, pam_audit=length_audit, length_audit=length_audit)
     model = results.values()[0][3][0]
 
     with open(filename, 'wb') as f:

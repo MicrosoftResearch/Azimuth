@@ -402,7 +402,7 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
         feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))        
         feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))            
         if np.any(np.isnan(feat_pd)):
-            print "wtf are there nans here when checks in nucleotide_features don't kick in?"  
+            print "why are there nans here when checks in nucleotide_features don't kick in?"  
             import ipdb; ipdb.set_trace() 
             res_all = None
             for i in range(seq_data_frame.shape[0]):
@@ -433,7 +433,10 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
           and (30-1)*4^2=464 double nucleotide features
     '''
     assert feature_type in ['all', 'pos_independent', 'pos_dependent']
-
+    if max_index_to_use <= len(s):
+        print "WARNING: trimming max_index_to use down to length of string=%s" % len(s)
+        max_index_to_use = len(s)
+    
     if max_index_to_use is not None:
         s = s[:max_index_to_use]
     #assert(len(s)==30, "length not 30")
