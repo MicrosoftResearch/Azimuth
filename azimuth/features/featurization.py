@@ -25,6 +25,8 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
         # spectrum kernels (position-independent) and weighted degree kernels (position-dependent)
         get_all_order_nuc_features(data['30mer'], feature_sets, learn_options, learn_options["order"], max_index_to_use=30)
 
+    check_feature_set(feature_sets)
+
     if learn_options["gc_features"]:
         gc_above_10, gc_below_10, gc_count = gc_features(data, length_audit)
         feature_sets['gc_above_10'] = pandas.DataFrame(gc_above_10)
@@ -89,20 +91,22 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     t1 = time.time()
     print "\t\tElapsed time for constructing features is %.2f seconds" % (t1-t0)
 
-    check_feature_set_dimensions(feature_sets)
+    check_feature_set(feature_sets)
     
     if learn_options['normalize_features']:
         assert("should not be here as doesn't make sense when we make one-off predictions, but could make sense for internal model comparisons when using regularized models")
         feature_sets = normalize_feature_sets(feature_sets)
-        check_feature_set_dimensions(feature_sets)
+        check_feature_set(feature_sets)
 
     return feature_sets
 
 
-def check_feature_set_dimensions(feature_sets):
+def check_feature_set(feature_sets):
     '''
     Ensure the # of people is the same in each feature set
     '''
+    assert feature_sets != {}, "no feature sets present"
+
     N = None
     for ft in feature_sets.keys():
         N2 = feature_sets[ft].shape[0]
@@ -112,6 +116,10 @@ def check_feature_set_dimensions(feature_sets):
             assert N >= 1, "should be at least one individual"
             assert N == N2, "# of individuals do not match up across feature sets"
 
+    for set in feature_sets.keys():
+        if np.any(np.isnan(feature_sets[set])):
+            raise Exception("found Nan in set %s" % set)
+        
 
 def NGGX_interaction_feature(data, pam_audit=True):
     '''
@@ -139,6 +147,7 @@ def get_all_order_nuc_features(data, feature_sets, learn_options, maxorder, max_
         feature_sets['%s_nuc_pd_Order%i' % (prefix, order)] = nuc_features_pd
         if learn_options['include_pi_nuc_feat']:
             feature_sets['%s_nuc_pi_Order%i' % (prefix, order)] = nuc_features_pi
+        check_feature_set(feature_sets)
         print "\t\t\t\t\t\t\tdone"
 
 
@@ -389,13 +398,28 @@ def normalize_features(data,axis):
 def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_independent, max_index_to_use, prefix=""):
 
     fast = True
-
     if include_pos_independent:
-        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
-        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))    
+        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))        
+        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))            
+        if np.any(np.isnan(feat_pd)):
+            print "wtf are there nans here when checks in nucleotide_features don't kick in?"  
+            import ipdb; ipdb.set_trace() 
+            res_all = None
+            for i in range(seq_data_frame.shape[0]):
+                tmp_seq = seq_data_frame.values[i]
+                res = nucleotide_features(tmp_seq, order, max_index_to_use, prefix, 'pos_dependent')
+                if res_all is None:
+                    res_all = pandas.DataFrame(res)
+                else:
+                    res_all = pandas.concat([res_all, pandas.DataFrame(res)], axis=1)
+                    assert not np.any(np.isnan(res.values)), "found nan in debug"
+            
+            raise Exception( "found nan in feat_pd")
+        assert not np.any(np.isnan(feat_pi)), "found nan in feat_pi"        
         return feat_pd, feat_pi
     else:
         feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
+        assert not np.any(np.isnan(feat_pd)), "found nan in feat_pd"
         return feat_pd
 
 def get_alphabet(order, raw_alphabet = ['A', 'T', 'C', 'G']):    
@@ -423,18 +447,26 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
         features_pos_dependent[alphabet.index(nucl) + (position*len(alphabet))] = 1.0
         features_pos_independent[alphabet.index(nucl)] += 1.0
     index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
-
+        
+    if np.any(np.isnan(features_pos_dependent)): 
+        raise Exception("found nan features in features_pos_dependent")
+    if np.any(np.isnan(features_pos_independent)): 
+        raise Exception("found nan features in features_pos_independent")
+    
     if feature_type == 'all' or feature_type == 'pos_independent':        
         index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
         if feature_type == 'all':
-            return pandas.Series(features_pos_dependent,index=index_dependent), pandas.Series(features_pos_independent,index=index_independent)
+            res = pandas.Series(features_pos_dependent,index=index_dependent), pandas.Series(features_pos_independent,index=index_independent)
+            assert not np.any(np.isnan(res.values))
+            return res
         else:
-            return pandas.Series(features_pos_independent, index=index_independent)
-    
-    if np.any(np.isnan(features_pos_dependent)): raise Exception("found nan features in features_pos_dependent")
-    if np.any(np.isnan(features_pos_independent)): raise Exception("found nan features in features_pos_independent")
-    
-    return pandas.Series(features_pos_dependent, index=index_dependent)
+            res = pandas.Series(features_pos_independent, index=index_independent)
+            assert not np.any(np.isnan(res.values))
+            return res
+            
+    res = pandas.Series(features_pos_dependent, index=index_dependent)
+    assert not np.any(np.isnan(res.values))
+    return res
 
 def nucleotide_features_dictionary(prefix=''):
     seqname = ['-4', '-3', '-2', '-1']
