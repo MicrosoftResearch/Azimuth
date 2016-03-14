@@ -57,12 +57,12 @@ def from_file(data_file, learn_options, data_file2=None, data_file3=None):
 
         learn_options = set_V2_target_names(learn_options)
 
-    elif learn_options["V"] == 3:  # merge of V1 and V2
+    elif learn_options["V"] == 3:  # merge of V1 and V2--this is what is used for the final model
         # these are relative to the V2 data, and V1 will be made to automatically match
         learn_options['binary target name'] = 'score_drug_gene_threshold'
         learn_options['rank-transformed target name'] = 'score_drug_gene_rank'
         learn_options['raw target name'] = None
-
+                
         Xdf, Y, gene_position, target_genes = mergeV1_V2(data_file, data_file2, learn_options)
 
 
