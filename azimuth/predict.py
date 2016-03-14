@@ -136,6 +136,8 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
     Output: cv_score_median, gene_rocs
     '''
 
+    print "range of y_all is [%f, %f]" % (np.min(y_all[learn_options['target_name']].values), np.max(y_all[learn_options['target_name']].values))
+    
     allowed_methods = ["GPy", "linreg", "AdaBoostRegressor",
                        "DecisionTreeRegressor", "RandomForestRegressor",
                        "ARDRegression", "GPy_fs", "mean", "random", "DNN", 

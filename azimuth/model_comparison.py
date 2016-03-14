@@ -309,7 +309,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
                     print "running %s, order %d for %s" % (model, order, learn_options_str)
 
                     Y, feature_sets, target_genes, learn_options, num_proc = setup_function(test=test, order=order, learn_options=partial_learn_opt, pam_audit=pam_audit, length_audit=length_audit) # TODO precompute features for all orders, as this is repated for each model
-
+                    
                     if model == 'L1':
                         learn_options_model = L1_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'L2':
