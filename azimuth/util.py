@@ -1068,8 +1068,8 @@ if __name__ == '__main__':
     #V = "0"
     V = "1"
     if V=="1":
-        human_data = pandas.read_excel("../data/07-23 Data for Jennifer.xlsx", sheetname=0, index_col=[0,1])
-        mouse_data = pandas.read_excel("../data/07-23 Data for Jennifer.xlsx", sheetname=1, index_col=[0,1])
+        human_data = pandas.read_excel("data/V1_data.xlsx", sheetname=0, index_col=[0,1])
+        mouse_data = pandas.read_excel("data/V1_data.xlsx", sheetname=1, index_col=[0,1])
         X, Y = combine_organisms()
         X.to_pickle('../data/X.pd') #sequence features (i.e. inputs to prediction)
         Y.to_pickle('../data/Y.pd') #cell-averaged ranks, plus more (i.e. possible targets for prediction)

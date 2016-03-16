@@ -53,3 +53,7 @@ where GUIDE, PERCENT_PEPTIDE and CUT_POSITION are numpy arrays.
 
 You can submit bug reports using the github issue tracker. 
 If you have any other question please contact: azimuth@microsoft.com.
+
+#### Re-training model
+
+Sometimes the pre-computed .pickle files in the saved_models directory are incompatible with different versions of scikitlearn. You can re-train the files saved_models/V3_model_full.pickle and saved_models/V3_model_nopos.pickle by running the command python model_comparison.py (which will overwrite the saved models). You can check that the resulting models match the models we precomputed by running python test_saved_models.py within the directory tests.
