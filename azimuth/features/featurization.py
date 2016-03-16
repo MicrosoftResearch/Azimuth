@@ -20,7 +20,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     t0 = time.time()
 
     feature_sets = {}
-    
+
     if learn_options["nuc_features"]:
         # spectrum kernels (position-independent) and weighted degree kernels (position-dependent)
         get_all_order_nuc_features(data['30mer'], feature_sets, learn_options, learn_options["order"], max_index_to_use=30)
@@ -39,7 +39,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
 
         for set in gene_position.columns:
             set_name = set
-            feature_sets[set_name] = pandas.DataFrame(gene_position[set])        
+            feature_sets[set_name] = pandas.DataFrame(gene_position[set])
         feature_sets["Percent Peptide <50%"] = feature_sets["Percent Peptide"] < 50
         feature_sets["Percent Peptide <50%"]['Percent Peptide <50%'] = feature_sets["Percent Peptide <50%"].pop("Percent Peptide")
 
@@ -92,7 +92,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     print "\t\tElapsed time for constructing features is %.2f seconds" % (t1-t0)
 
     check_feature_set(feature_sets)
-    
+
     if learn_options['normalize_features']:
         assert("should not be here as doesn't make sense when we make one-off predictions, but could make sense for internal model comparisons when using regularized models")
         feature_sets = normalize_feature_sets(feature_sets)
@@ -119,7 +119,7 @@ def check_feature_set(feature_sets):
     for set in feature_sets.keys():
         if np.any(np.isnan(feature_sets[set])):
             raise Exception("found Nan in set %s" % set)
-        
+
 
 def NGGX_interaction_feature(data, pam_audit=True):
     '''
@@ -156,7 +156,7 @@ def countGC(s, length_audit=True):
     GC content for only the 20mer, as per the Doench paper/code
     '''
     if length_audit:
-        assert len(s) == 30, "seems to assume 30mer"    
+        assert len(s) == 30, "seems to assume 30mer"
     return len(s[4:24].replace('A', '').replace('T', ''))
 
 
@@ -210,13 +210,13 @@ def get_micro_homology_features(gene_names, learn_options, X):
             for j, ps in enumerate(guide_inds):
                 guide_seq = Seq.Seq(X['30mer'][ps])
                 strand = X['Strand'][ps]
-                if strand=='sense':              
+                if strand=='sense':
                     gene_seq = gene_seq.reverse_complement()
                 # figure out the sequence to the left and right of this guide, in the gene
-                ind = gene_seq.find(guide_seq)                        
+                ind = gene_seq.find(guide_seq)
                 if ind==-1:
                     gene_seq = gene_seq.reverse_complement()
-                    ind = gene_seq.find(guide_seq)                        
+                    ind = gene_seq.find(guide_seq)
                     #assert ind != -1, "still didn't work"
                     #print "shouldn't get here"
                 else:
@@ -242,20 +242,20 @@ def get_micro_homology_features(gene_names, learn_options, X):
                     #    right_win = right_win.reverse_complement()
                     assert len(left_win.tostring())==k_mer_length_left
                     assert len(right_win.tostring())==k_mer_length_right
-                                    
+
                     sixtymer = str(left_win) + str(guide_seq) + str(right_win)
                     assert len(sixtymer)==60, "should be of length 60"
                     mh_score, oof_score = microhomology.compute_score(sixtymer)
 
                 feat.ix[ps,"mh_score"] = mh_score
                 feat.ix[ps,"oof_score"] = oof_score
-            print "computed microhomology of %s" % (str(gene))           
-    
+            print "computed microhomology of %s" % (str(gene))
+
     return pandas.DataFrame(feat, dtype='float')
 
 
 def local_gene_seq_features(gene_names, learn_options, X):
-    
+
     print "building local gene sequence features"
     feat = pandas.DataFrame(index=X.index)
     feat["gene_left_win"] = ""
@@ -399,11 +399,12 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
 
     fast = True
     if include_pos_independent:
-        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))        
-        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))            
+        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
+        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))
         if np.any(np.isnan(feat_pd)):
-            print "wtf are there nans here when checks in nucleotide_features don't kick in?"  
-            import ipdb; ipdb.set_trace() 
+            print "wtf are there nans here when checks in nucleotide_features don't kick in?"
+
+            import ipdb; ipdb.set_trace()
             res_all = None
             for i in range(seq_data_frame.shape[0]):
                 tmp_seq = seq_data_frame.values[i]
@@ -413,16 +414,16 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
                 else:
                     res_all = pandas.concat([res_all, pandas.DataFrame(res)], axis=1)
                     assert not np.any(np.isnan(res.values)), "found nan in debug"
-            
+
             raise Exception( "found nan in feat_pd")
-        assert not np.any(np.isnan(feat_pi)), "found nan in feat_pi"        
+        assert not np.any(np.isnan(feat_pi)), "found nan in feat_pi"
         return feat_pd, feat_pi
     else:
         feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
         assert not np.any(np.isnan(feat_pd)), "found nan in feat_pd"
         return feat_pd
 
-def get_alphabet(order, raw_alphabet = ['A', 'T', 'C', 'G']):    
+def get_alphabet(order, raw_alphabet = ['A', 'T', 'C', 'G']):
     alphabet = ["".join(i) for i in itertools.product(raw_alphabet, repeat=order)]
     return alphabet, raw_alphabet
 
@@ -441,19 +442,19 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
     alphabet, raw_alphabet = get_alphabet(order, raw_alphabet = raw_alphabet)
     features_pos_dependent = np.zeros(len(alphabet)*(len(s)-(order-1)))
     features_pos_independent = np.zeros(np.power(len(raw_alphabet),order))
-        
+
     for position in range(0, len(s)-order+1, 1):
         nucl = s[position:position+order]
         features_pos_dependent[alphabet.index(nucl) + (position*len(alphabet))] = 1.0
         features_pos_independent[alphabet.index(nucl)] += 1.0
     index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
-        
-    if np.any(np.isnan(features_pos_dependent)): 
+
+    if np.any(np.isnan(features_pos_dependent)):
         raise Exception("found nan features in features_pos_dependent")
-    if np.any(np.isnan(features_pos_independent)): 
+    if np.any(np.isnan(features_pos_independent)):
         raise Exception("found nan features in features_pos_independent")
-    
-    if feature_type == 'all' or feature_type == 'pos_independent':        
+
+    if feature_type == 'all' or feature_type == 'pos_independent':
         index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
         if feature_type == 'all':
             res = pandas.Series(features_pos_dependent,index=index_dependent), pandas.Series(features_pos_independent,index=index_independent)
@@ -463,7 +464,7 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
             res = pandas.Series(features_pos_independent, index=index_independent)
             assert not np.any(np.isnan(res.values))
             return res
-            
+
     res = pandas.Series(features_pos_dependent, index=index_dependent)
     assert not np.any(np.isnan(res.values))
     return res
@@ -475,8 +476,8 @@ def nucleotide_features_dictionary(prefix=''):
 
     orders = [1, 2, 3]
     sequence = 30
-    feature_names_dep = []  
-    feature_names_indep = []      
+    feature_names_dep = []
+    feature_names_indep = []
     index_dependent = []
     index_independent = []
 
@@ -492,10 +493,10 @@ def nucleotide_features_dictionary(prefix=''):
         for pos in range(sequence-(order-1)):
             for letter in alphabet:
                 feature_names_dep.append('%s_%s' % (letter, seqname[pos]))
-        
+
         for letter in alphabet:
             feature_names_indep.append('%s' % letter)
-        
+
         assert len(feature_names_indep) == len(index_independent)
         assert len(feature_names_dep) == len(index_dependent)
 
@@ -522,4 +523,3 @@ def normalize_feature_sets(feature_sets):
     print "\t\tElapsed time for normalizing features is %.2f seconds" % (t2-t1)
 
     return new_feature_sets
-
