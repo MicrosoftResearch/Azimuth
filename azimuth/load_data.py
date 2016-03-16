@@ -57,12 +57,12 @@ def from_file(data_file, learn_options, data_file2=None, data_file3=None):
 
         learn_options = set_V2_target_names(learn_options)
 
-    elif learn_options["V"] == 3:  # merge of V1 and V2
+    elif learn_options["V"] == 3:  # merge of V1 and V2--this is what is used for the final model
         # these are relative to the V2 data, and V1 will be made to automatically match
         learn_options['binary target name'] = 'score_drug_gene_threshold'
         learn_options['rank-transformed target name'] = 'score_drug_gene_rank'
         learn_options['raw target name'] = None
-
+                
         Xdf, Y, gene_position, target_genes = mergeV1_V2(data_file, data_file2, learn_options)
 
 
@@ -123,9 +123,9 @@ def combine_organisms(human_data, mouse_data):
     return X, Y
 
 
-def read_V1_data(data_file, learn_options, AML_file="../../data/AML_EL4_PercentRank_0725.txt"):
+def read_V1_data(data_file, learn_options, AML_file="data/V1_suppl_data.txt"):
     if data_file is None:
-        data_file = "../../data/07-23 Data for Jennifer.xlsx"
+        data_file = "data/V1_data.xlsx"
     human_data = pandas.read_excel(data_file, sheetname=0, index_col=[0, 1])
     mouse_data = pandas.read_excel(data_file, sheetname=1, index_col=[0, 1])
     Xdf, Y = combine_organisms(human_data, mouse_data)
@@ -222,7 +222,7 @@ def read_xu_et_al(data_file, learn_options=None, verbose=True, subsetting='ours'
 
 def read_V2_data(data_file, learn_options=None, verbose=True):
     if data_file is None:
-        data_file = "../../data/11-15-2014 DeepXPR results_processed.xlsx"
+        data_file = "data/V2_data.xlsx"
 
     # to compare
     # import predict as pr; a1, g1, t1, X1, Y1 = pr.data_setup()

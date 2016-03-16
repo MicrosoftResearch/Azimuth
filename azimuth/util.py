@@ -128,9 +128,10 @@ def concatenate_feature_sets(feature_sets):
     if False:
         inputs.shape
         for j in feature_sets.keys(): print j + str(feature_sets[j].shape)
-        import ipdb; ipdb.set_trace()        
+        import ipdb; ipdb.set_trace()       
+    
+    print "final size of inputs matrix is (%d, %d)" % inputs.shape    
     return inputs, dim, dimsum, feature_names
-
 
 def extract_individual_level_data(one_result):
     '''
@@ -1067,8 +1068,8 @@ if __name__ == '__main__':
     #V = "0"
     V = "1"
     if V=="1":
-        human_data = pandas.read_excel("../data/07-23 Data for Jennifer.xlsx", sheetname=0, index_col=[0,1])
-        mouse_data = pandas.read_excel("../data/07-23 Data for Jennifer.xlsx", sheetname=1, index_col=[0,1])
+        human_data = pandas.read_excel("data/V1_data.xlsx", sheetname=0, index_col=[0,1])
+        mouse_data = pandas.read_excel("data/V1_data.xlsx", sheetname=1, index_col=[0,1])
         X, Y = combine_organisms()
         X.to_pickle('../data/X.pd') #sequence features (i.e. inputs to prediction)
         Y.to_pickle('../data/Y.pd') #cell-averaged ranks, plus more (i.e. possible targets for prediction)

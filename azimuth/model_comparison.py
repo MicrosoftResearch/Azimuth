@@ -309,7 +309,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
                     print "running %s, order %d for %s" % (model, order, learn_options_str)
 
                     Y, feature_sets, target_genes, learn_options, num_proc = setup_function(test=test, order=order, learn_options=partial_learn_opt, pam_audit=pam_audit, length_audit=length_audit) # TODO precompute features for all orders, as this is repated for each model
-
+                    
                     if model == 'L1':
                         learn_options_model = L1_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'L2':
@@ -414,7 +414,7 @@ def runner(models, learn_options, GP_likelihoods=None, orders=None, WD_kernel_de
 
         return tempdir, clust_filename, user#, stdout, stderr
 
-def save_final_model_V3(filename=None, include_position=True, learn_options=None):
+def save_final_model_V3(filename=None, include_position=True, learn_options=None, short_name='final', pam_audit=True, length_audit=True):
     '''
     run_models(produce_final_model=True) is what saves the model
     '''
@@ -477,11 +477,11 @@ def save_final_model_V3(filename=None, include_position=True, learn_options=None
                  'adaboost_CV' : False
                 }
 
-    learn_options_set = {'final': learn_options}
+    learn_options_set = {short_name: learn_options}
     results, all_learn_options = run_models(["AdaBoost"], orders=[2], adaboost_learning_rates=[0.1],
                                             adaboost_max_depths=[3], adaboost_num_estimators=[100],
                                             learn_options_set=learn_options_set,
-                                            test=test, CV=False)
+                                            test=test, CV=False, pam_audit=length_audit, length_audit=length_audit)
     model = results.values()[0][3][0]
 
     with open(filename, 'wb') as f:

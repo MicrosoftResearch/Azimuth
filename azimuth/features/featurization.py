@@ -14,7 +14,11 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     '''
     assumes that data contains the 30mer
     returns set of features from which one can make a kernel for each one
-    '''
+    '''    
+    all_lens = data['30mer'].apply(len).values
+    unique_lengths = np.unique(all_lens)
+    num_lengths = len(unique_lengths)
+    assert num_lengths == 1, "should only have sequences of a single length, but found %s: %s" % (num_lengths, str(unique_lengths))
 
     print "Constructing features..."
     t0 = time.time()
@@ -399,24 +403,10 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
 
     fast = True
     if include_pos_independent:
-        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
-        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))
-        if np.any(np.isnan(feat_pd)):
-            print "wtf are there nans here when checks in nucleotide_features don't kick in?"
-
-            import ipdb; ipdb.set_trace()
-            res_all = None
-            for i in range(seq_data_frame.shape[0]):
-                tmp_seq = seq_data_frame.values[i]
-                res = nucleotide_features(tmp_seq, order, max_index_to_use, prefix, 'pos_dependent')
-                if res_all is None:
-                    res_all = pandas.DataFrame(res)
-                else:
-                    res_all = pandas.concat([res_all, pandas.DataFrame(res)], axis=1)
-                    assert not np.any(np.isnan(res.values)), "found nan in debug"
-
-            raise Exception( "found nan in feat_pd")
-        assert not np.any(np.isnan(feat_pi)), "found nan in feat_pi"
+        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))        
+        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))            
+        assert not np.any(np.isnan(feat_pd)), "nans here can arise from sequences of different lengths"           
+        assert not np.any(np.isnan(feat_pi)), "nans here can arise from sequences of different lengths"           
         return feat_pd, feat_pi
     else:
         feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
@@ -434,7 +424,10 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
           and (30-1)*4^2=464 double nucleotide features
     '''
     assert feature_type in ['all', 'pos_independent', 'pos_dependent']
-
+    if max_index_to_use <= len(s):
+        print "WARNING: trimming max_index_to use down to length of string=%s" % len(s)
+        max_index_to_use = len(s)
+    
     if max_index_to_use is not None:
         s = s[:max_index_to_use]
     #assert(len(s)==30, "length not 30")
