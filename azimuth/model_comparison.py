@@ -527,9 +527,7 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
             model, learn_options = pickle.load(f)
     else:
         model, learn_options = model
-
-    learn_options = feat.override_learn_options(learn_options_override, learn_options)
-
+        
     learn_options["V"] = 2
 
     # Y, feature_sets, target_genes, learn_options, num_proc = setup(test=False, order=2, learn_options=learn_options, data_file=test_filename)
