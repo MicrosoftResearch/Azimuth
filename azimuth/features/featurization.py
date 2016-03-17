@@ -425,7 +425,7 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
     '''
     assert feature_type in ['all', 'pos_independent', 'pos_dependent']
     if max_index_to_use <= len(s):
-        print "WARNING: trimming max_index_to use down to length of string=%s" % len(s)
+        #print "WARNING: trimming max_index_to use down to length of string=%s" % len(s)        
         max_index_to_use = len(s)
     
     if max_index_to_use is not None:

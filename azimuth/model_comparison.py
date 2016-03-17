@@ -528,6 +528,8 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     else:
         model, learn_options = model
 
+    learn_options = override_learn_options(learn_options_override, learn_options)
+
     learn_options["V"] = 2
 
     # Y, feature_sets, target_genes, learn_options, num_proc = setup(test=False, order=2, learn_options=learn_options, data_file=test_filename)
@@ -546,6 +548,24 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     # call to scikit-learn, returns a vector of predicted values
     return model.predict(inputs)
 
+def override_learn_options(learn_options_override, learn_options):
+    """
+    override all keys seen in learn_options_override to alter learn_options
+    """
+    if learn_options_override is not None:
+        for k in learn_options_override.keys():
+            learn_options[k] = learn_options_override[k]
+    return learn_options
+
+def fill_learn_options(learn_options_fill, learn_options):
+    """
+    only fill in keys that are missing form learn_options from learn_options_fill
+    """
+    if learn_options_fill is not None:
+        for k in learn_options_fill.keys():
+            if not learn_options.has_key(k):
+                learn_options[k] = learn_options_fill[k]
+    return learn_options
 
 
 def write_results(predictions, file_to_predict):
