@@ -528,7 +528,7 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     else:
         model, learn_options = model
 
-    learn_options = override_learn_options(learn_options_override, learn_options)
+    learn_options = feat.override_learn_options(learn_options_override, learn_options)
 
     learn_options["V"] = 2
 
