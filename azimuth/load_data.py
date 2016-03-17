@@ -4,32 +4,35 @@ import matplotlib.pyplot as plt
 import scipy as sp
 import scipy.stats
 import numpy as np
+import os
+
+cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 def from_custom_file(data_file, learn_options):
     # use semantics of when we load V2 data
-    print "Loading inputs to predict from %s" % data_file        
-    data = pandas.read_csv(data_file) 
-           
+    print "Loading inputs to predict from %s" % data_file
+    data = pandas.read_csv(data_file)
+
     mandatory_columns = ['30mer', 'Target gene', 'Percent Peptide', 'Amino Acid Cut position']
     for col in mandatory_columns:
         assert col in data.columns, "inputs for prediction must include these columns: %s" % mandatory_columns
-           
+
     Xdf = pandas.DataFrame(data)
     Xdf['30mercopy'] = Xdf['30mer']
     Xdf = Xdf.set_index(['30mer', 'Target gene'])
     Xdf['30mer'] = Xdf['30mercopy']
-    Xdf.index.names = ['Sequence', 'Target']                 
+    Xdf.index.names = ['Sequence', 'Target']
     Xdf['drug']= ['dummydrug%s' % i for i in range(Xdf.shape[0])]
     Xdf = Xdf.set_index('drug', append=True)
-            
-    Y = None        
+
+    Y = None
     gene_position = Xdf[['Percent Peptide', 'Amino Acid Cut position']]
     target_genes =  np.unique(Xdf.index.levels[1])
-    
+
     learn_options = set_V2_target_names(learn_options)
 
     return Xdf, Y, gene_position, target_genes
-    
+
 
 def from_file(data_file, learn_options, data_file2=None, data_file3=None):
     if learn_options["V"] == 1:  # from Nature Biotech paper
@@ -62,7 +65,7 @@ def from_file(data_file, learn_options, data_file2=None, data_file3=None):
         learn_options['binary target name'] = 'score_drug_gene_threshold'
         learn_options['rank-transformed target name'] = 'score_drug_gene_rank'
         learn_options['raw target name'] = None
-                
+
         Xdf, Y, gene_position, target_genes = mergeV1_V2(data_file, data_file2, learn_options)
 
 
@@ -123,13 +126,13 @@ def combine_organisms(human_data, mouse_data):
     return X, Y
 
 
-def read_V1_data(data_file, learn_options, AML_file="data/V1_suppl_data.txt"):
+def read_V1_data(data_file, learn_options, AML_file=cur_dir + "/data/V1_suppl_data.txt"):
     if data_file is None:
-        data_file = "data/V1_data.xlsx"
+        data_file = cur_dir + "/data/V1_data.xlsx"
     human_data = pandas.read_excel(data_file, sheetname=0, index_col=[0, 1])
     mouse_data = pandas.read_excel(data_file, sheetname=1, index_col=[0, 1])
     Xdf, Y = combine_organisms(human_data, mouse_data)
-    
+
     # get position within each gene, then join and re-order
     # note that 11 missing guides we were told to ignore
     annotations = pandas.read_csv(AML_file, delimiter='\t', index_col=[0, 4])
@@ -166,12 +169,12 @@ def rank_transform(x):
 def read_xu_et_al(data_file, learn_options=None, verbose=True, subsetting='ours'):
     if data_file is None:
         data_file = '../data/xu_et_al_data.xlsx'
-            
+
     datasets = ['ribo', 'non_ribo', 'mESC']
     aggregated = None
-    
+
     for d in datasets:
-        data_efficient = pandas.read_excel(data_file, sheetname='%s_efficient_sgRNA' % d, skiprows=2) 
+        data_efficient = pandas.read_excel(data_file, sheetname='%s_efficient_sgRNA' % d, skiprows=2)
         data_inefficient = pandas.read_excel(data_file, sheetname='%s_inefficient_sgRNA' % d, skiprows=2)
 
         data_efficient['threshold'] = 1.
@@ -192,7 +195,7 @@ def read_xu_et_al(data_file, learn_options=None, verbose=True, subsetting='ours'
         aggregated["sequence(target+3'+5')"] = aggregated["sequence(target+3'+5')"].apply(lambda x: x[6:-4])
     else:
         aggregated["sequence(target+3'+5')"] = aggregated["sequence(target+3'+5')"].apply(lambda x: x[10:])
-        
+
     # make sure EVEYTHING is uppercase
     aggregated["sequence(target+3'+5')"] = aggregated["sequence(target+3'+5')"].apply(lambda x: x.upper())
 
@@ -206,7 +209,7 @@ def read_xu_et_al(data_file, learn_options=None, verbose=True, subsetting='ours'
     df = aggregated
     df = df.rename(columns={'30mer': 'Sequence', 'Target gene': 'Target'})
     df['drug'] = 'nodrug'
-    df['test'] = 1    
+    df['test'] = 1
     df = df.set_index(['Sequence', 'Target', 'drug'])
     df['30mer'] = df.index.get_level_values(0)
     df['Target gene'] = df.index.get_level_values(1)
@@ -217,12 +220,12 @@ def read_xu_et_al(data_file, learn_options=None, verbose=True, subsetting='ours'
     df['Percent Peptide'] = 0
     df['Amino Acid Cut position'] = 0
     target_genes = np.unique(df['Target gene'].values)
-    
+
     return df[['Nucleotide cut position', 'Percent Peptide', 'Amino Acid Cut position']], target_genes, df[['30mer', 'Strand']], df[['score_drug_gene_rank', 'score_drug_gene_threshold', 'test', 'Target gene']]
 
 def read_V2_data(data_file, learn_options=None, verbose=True):
     if data_file is None:
-        data_file = "data/V2_data.xlsx"
+        data_file = cur_dir + "/data/V2_data.xlsx"
 
     # to compare
     # import predict as pr; a1, g1, t1, X1, Y1 = pr.data_setup()
@@ -379,7 +382,7 @@ def mergeV1_V2(data_file, data_file2, learn_options):
     ground_truth_label, etc. are taken to correspond to the V2 data, and then the V1 is appropriately matched
     based on semantics
     '''
-    assert not learn_options['include_strand'], "don't currently have 'Strand' column in V1 data"    
+    assert not learn_options['include_strand'], "don't currently have 'Strand' column in V1 data"
 
     annotations, gene_position1, target_genes1, Xdf1, Y1 = read_V1_data(data_file, learn_options)
     Xdf2, drugs_to_genes, target_genes2, Y2, gene_position2 = read_V2_data(data_file2)
@@ -419,7 +422,7 @@ def mergeV1_V2(data_file, data_file2, learn_options):
     target_genes = np.concatenate((target_genes1, target_genes2))
 
     save_to_file = False
-        
+
     if save_to_file:
         Y.index.names = ['Sequence', 'Target', 'drug']
         assert np.all(Xdf.index.values==Y.index.values), "rows don't match up"
@@ -427,25 +430,25 @@ def mergeV1_V2(data_file, data_file2, learn_options):
         onedupind = np.where(Y.index.duplicated())[0][0]
         alldupind = np.where(Y.index.get_level_values(0).values==Y.index[onedupind][0])[0]
 
-        #arbitrarily set one of these to have "nodrug2" as the third level index 
+        #arbitrarily set one of these to have "nodrug2" as the third level index
         #so that they are not repeated, and the joints therefore do not augment the data set
         assert len(alldupind)==2, "expected only duplicates"
         newindex = Y.index.tolist()
         newindex[onedupind] = (newindex[onedupind][0], newindex[onedupind][1], "nodrug2")
         Y.index = pandas.MultiIndex.from_tuples(newindex, names = Y.index.names)
         Xdf.index = pandas.MultiIndex.from_tuples(newindex, names = Y.index.names)
-                                
+
         # there seems to be a duplicate index, and thus this increases the data set size, so doing it the hacky way...
         XandY = pandas.merge(Xdf, Y, how="inner", left_index=True, right_index=True)
         gene_position_tmp = gene_position.copy()
         gene_position_tmp.index.names = ['Sequence', 'Target', 'drug']
         gene_position_tmp.index = pandas.MultiIndex.from_tuples(newindex, names = Y.index.names)
         XandY = pandas.merge(XandY, gene_position_tmp, how="inner", left_index=True, right_index=True)
-                               
+
         # truncate to 30mers
         XandY["30mer"] = XandY["30mer"].apply(lambda x: x[0:30])
         XandY.to_csv(r'D:\Source\CRISPR\data\tmp\V3.csv')
-        
+
     return Xdf, Y, gene_position, target_genes
 
 
