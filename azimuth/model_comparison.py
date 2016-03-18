@@ -263,7 +263,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
         Xdf["30mer"] = Xdf["30mer"].apply(lambda x: x[1:]) # chop the first nucleotide
 
     if learn_options.has_key('left_right_guide_ind') and learn_options['left_right_guide_ind'] is not None:
-        seq_start, seq_end = learn_options['left_right_guide_ind']
+        seq_start, seq_end, expected_length = learn_options['left_right_guide_ind']
         Xdf['30mer'] = Xdf['30mer'].apply(lambda seq: seq[seq_start:seq_end])
 
     feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position, pam_audit=pam_audit, length_audit=length_audit)
@@ -490,7 +490,7 @@ def save_final_model_V3(filename=None, include_position=True, learn_options=None
     return model
 
 
-def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam_audit=True, length_audit=False):
+def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam_audit=True, length_audit=False, learn_options_override=None):
     """
     if pam_audit==False, then it will not check for GG in the expected position
     this is useful if predicting on PAM mismatches, such as with off-target
@@ -529,6 +529,8 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
         model, learn_options = model
         
     learn_options["V"] = 2
+
+    learn_options = override_learn_options(learn_options_override, learn_options)
 
     # Y, feature_sets, target_genes, learn_options, num_proc = setup(test=False, order=2, learn_options=learn_options, data_file=test_filename)
     # inputs, dim, dimsum, feature_names = pd.concatenate_feature_sets(feature_sets)
