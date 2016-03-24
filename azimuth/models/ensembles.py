@@ -18,19 +18,26 @@ def spearman_scoring(clf, X, y):
 
 
 
-def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_options):
+def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_options, classification=False):
     '''
-    AdaBoostRegressor from scikitlearn.
+    AdaBoostRegressor/Classifier from scikitlearn.
     '''
-
+        
     if learn_options['adaboost_version'] == 'python':
         if not learn_options['adaboost_CV']:
-            clf = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'], learning_rate=learn_options['adaboost_learning_rate'],
-                                               n_estimators=learn_options['adaboost_n_estimators'],
-                                               alpha=learn_options['adaboost_alpha'],
-                                               subsample=1.0, min_samples_split=2, min_samples_leaf=1, max_depth=learn_options['adaboost_max_depth'],
-                                               init=None, random_state=None, max_features=None,
-                                               verbose=0, max_leaf_nodes=None, warm_start=False)
+            if not classification:
+                clf = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'], learning_rate=learn_options['adaboost_learning_rate'],
+                                                   n_estimators=learn_options['adaboost_n_estimators'],
+                                                   alpha=learn_options['adaboost_alpha'],
+                                                   subsample=1.0, min_samples_split=2, min_samples_leaf=1,                                    max_depth=learn_options['adaboost_max_depth'],
+                                                   init=None, random_state=None, max_features=None,
+                                                   verbose=0, max_leaf_nodes=None, warm_start=False)
+            else:
+                clf = en.GradientBoostingClassifier(learning_rate=learn_options['adaboost_learning_rate'],
+                                                   n_estimators=learn_options['adaboost_n_estimators'],
+                                                   subsample=1.0, min_samples_split=2, min_samples_leaf=1,                                    max_depth=learn_options['adaboost_max_depth'],
+                                                   init=None, random_state=None, max_features=None,
+                                                   verbose=0, max_leaf_nodes=None, warm_start=False)
 
             clf.fit(X[train], y[train].flatten())
             y_pred = clf.predict(X[test])[:, None]
@@ -67,6 +74,7 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
 
                 clf.fit(X[train], y[train].flatten())
             elif learn_options["algorithm_hyperparam_search"]=="grid":
+                 assert not classification, "need to tweak code below to do classificaton, as above"
                  n_jobs = 20
 
                  print "Adaboost with GridSearch"

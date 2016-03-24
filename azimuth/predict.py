@@ -134,11 +134,12 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
     Method: "GPy" or "linreg"
     Metric: NDCG (learning to rank metric, Normalized Discounted Cumulative Gain); AUC
     Output: cv_score_median, gene_rocs
+    When CV=False, it trains on everything (and tests on everything, just to fit the code)
     '''
 
     print "range of y_all is [%f, %f]" % (np.min(y_all[learn_options['target_name']].values), np.max(y_all[learn_options['target_name']].values))
     
-    allowed_methods = ["GPy", "linreg", "AdaBoostRegressor",
+    allowed_methods = ["GPy", "linreg", "AdaBoostRegressor", "AdaBoostClassifier",
                        "DecisionTreeRegressor", "RandomForestRegressor",
                        "ARDRegression", "GPy_fs", "mean", "random", "DNN", 
                        "lasso_ensemble", "doench", "logregL1", "sgrna_from_doench", 'SVC', 'xu_et_al']
@@ -253,7 +254,9 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
             elif learn_options["method"]=="logregL1":
                 job = pool.apply_async(azimuth.models.regression.logreg_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options))
             elif learn_options["method"]=="AdaBoostRegressor":
-                 job = pool.apply_async(azimuth.models.ensembles.adaboost_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options))
+                 job = pool.apply_async(azimuth.models.ensembles.adaboost_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options, False))
+            elif learn_options["method"]=="AdaBoostClassifier":
+                 job = pool.apply_async(azimuth.models.ensembles.adaboost_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options, True))
             elif learn_options["method"]=="DecisionTreeRegressor":
                 job = pool.apply_async(azimuth.models.ensembles.decisiontree_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options))
             elif learn_options["method"]=="RandomForestRegressor":
@@ -309,7 +312,9 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
             elif learn_options["method"]=="logregL1":
                 y_pred, m[i] = azimuth.models.regression.logreg_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
             elif learn_options["method"]=="AdaBoostRegressor":
-                 y_pred, m[i] = azimuth.models.ensembles.adaboost_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
+                 y_pred, m[i] = azimuth.models.ensembles.adaboost_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options, classification=False)
+            elif learn_options["method"]=="AdaBoostClassifier":
+                 y_pred, m[i] = azimuth.models.ensembles.adaboost_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options, classification=True)
             elif learn_options["method"]=="DecisionTreeRegressor":
                  y_pred, m[i] = azimuth.models.ensembles.decisiontree_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
             elif learn_options["method"]=="RandomForestRegressor":

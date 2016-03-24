@@ -89,7 +89,8 @@ def SVC_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_optio
     y_bin = y_all[learn_options['binary target name']].values[:, None]
     clf = LinearSVC(penalty='l2', dual=False)
     clf.fit(X[train], y_bin[train].flatten())
-    y_pred = clf.predict(X[test])[:, None]
+    #y_pred = clf.predict(X[test])[:, None] # this returns 0/1
+    y_pred = clf.decision_function(X[test])[:, None]
     return y_pred, clf
 
 

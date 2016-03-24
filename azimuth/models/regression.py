@@ -44,7 +44,7 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
     assert len(np.unique(y)) <= 2, "if using logreg need binary targets"
     assert learn_options["weighted"] is None, "cannot do weighted Log reg"
     assert learn_options['feature_select'] is False, "cannot do feature selection yet in logistic regression--see linreg_on_fold to implement"
-
+    
     cv, n_folds = set_up_folds(learn_options, y_all.iloc[train])
 
     assert learn_options['penalty'] == "L1" or learn_options['penalty'] == "L2", "can only use L1 or L2 with logistic regression"
@@ -56,7 +56,8 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
             clf = sklearn.linear_model.LogisticRegression(penalty=learn_options['penalty'].lower(), dual=False,
                                                           fit_intercept=True, class_weight='auto', tol=0.001, C=1.0/alpha)
             clf.fit(X[train][train_inner], y[train][train_inner].flatten())
-            tmp_pred = clf.predict(X[train][test_inner])
+            #tmp_pred = clf.predict(X[train][test_inner])
+            tmp_pred = clf.predict_proba(X[train][test_inner])
 
             if learn_options["training_metric"] == "AUC":
                 fpr, tpr, _ = roc_curve(y_all[learn_options["ground_truth_label"]][train][test_inner], tmp_pred)
@@ -90,7 +91,8 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
                                                   dual=False, fit_intercept=True, class_weight='auto',
                                                   tol=0.001, C=1.0/best_alpha)
     clf.fit(X[train], y[train].flatten())
-    y_pred = clf.predict(X[test])
+    #y_pred = clf.predict(X[test])
+    y_pred = clf.predict_proba(X[test])
     y_pred = y_pred[:, None]
     return y_pred, clf
 
@@ -240,11 +242,12 @@ def get_weights(learn_options, fold, y, y_all):
     return weights
 
 
-def set_up_folds(learn_options, y):
-    if learn_options['ignore_gene_level_for_inner_loop'] or learn_options["cv"] == "stratified":
-        label_encoder = sklearn.preprocessing.LabelEncoder()
-        label_encoder.fit(y['Target gene'].values)
-        gene_classes = label_encoder.transform(y['Target gene'].values)
+def set_up_folds(learn_options, y):    
+    label_encoder = sklearn.preprocessing.LabelEncoder()
+    label_encoder.fit(y['Target gene'].values)    
+    gene_classes = label_encoder.transform(y['Target gene'].values)
+    n_genes = len(np.unique(gene_classes))    
+    if learn_options['ignore_gene_level_for_inner_loop'] or learn_options["cv"] == "stratified" or n_genes==1:                
         if 'n_folds' not in learn_options.keys():
             n_folds = len(np.unique(gene_classes))
         else:

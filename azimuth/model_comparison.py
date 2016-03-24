@@ -151,14 +151,19 @@ def xu_et_al_setup(learn_options, set_target_fn=set_target):
 
     return learn_options
 
-def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate=0.1, set_target_fn=set_target):
+def adaboost_setup(learn_options, num_estimators=100, max_depth=3, learning_rate=0.1, set_target_fn=set_target, model="AdaBoost"):
     """
     """
     learn_options = set_target_fn(learn_options, classification=False)
-    learn_options['method'] = "AdaBoostRegressor"
+    if model=="AdaBoost":
+        learn_options['method'] = "AdaBoostRegressor"
+    elif model=="AdaBoostClassifier":
+        learn_options['method'] = "AdaBoostClassifier"
+    else:
+        raise Exception("model must be either AdaBoost or AdaBoost Classifier")
     learn_options['adaboost_version'] = 'python' # "R" or "python"
 
-    if 'adaboost_loss' not in learn_options.keys():
+    if 'adaboost_loss' not in learn_options.keys() and model=="AdaBoostRegressor":
         learn_options['adaboost_loss'] = 'ls' # alternatives: "lad", "huber", "quantile", see scikit docs for details
     if 'adaboost_alpha' not in learn_options.keys():
         learn_options['adaboost_alpha'] = 0.5 # this parameter is only used by the huber and quantile loss functions.
@@ -289,7 +294,7 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
     #shorten so easier to display on graphs
     feat_models_short = {'L1':"L1", 'L2':"L2", 'elasticnet':"EN", 'linreg':"LR",
                          'RandomForest': "RF",
-                         'AdaBoost':"AB", 'doench': 'doench',
+                         'AdaBoost':"AB", 'AdaBoostClassifier':"ABClass", 'doench': 'doench',
                          "logregL1": "logregL1", "sgrna_from_doench":"sgrna_from_doench", 'SVC': 'SVC', 'xu_et_al': 'xu_et_al'}
 
     if not CV:
@@ -330,11 +335,11 @@ def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_
                         learn_options_model = sgrna_from_doench_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
                     elif model == 'xu_et_al':
                         learn_options_model = xu_et_al_setup(copy.deepcopy(learn_options), set_target_fn=set_target_fn)
-                    elif model == 'AdaBoost':
+                    elif model == 'AdaBoost' or 'AdaBoostClassifier':
                         for learning_rate in adaboost_learning_rates:
                             for num_estimators in adaboost_num_estimators:
                                 for max_depth in adaboost_max_depths:
-                                    learn_options_model = adaboost_setup(copy.deepcopy(learn_options), learning_rate=learning_rate, num_estimators=num_estimators, max_depth=max_depth, set_target_fn=set_target_fn)
+                                    learn_options_model = adaboost_setup(copy.deepcopy(learn_options), learning_rate=learning_rate, num_estimators=num_estimators, max_depth=max_depth, set_target_fn=set_target_fn, model=model)
                         model_string = feat_models_short[model] + '_or%d_md%d_lr%.2f_n%d_%s' % (learn_options_set[learn_options_str]["order"], max_depth, learning_rate, num_estimators, learn_options_str)
                     if model != 'AdaBoost':
                         model_string = feat_models_short[model] + '_ord%d_%s' % (learn_options_set[learn_options_str]["order"], learn_options_str)
