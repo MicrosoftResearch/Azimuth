@@ -61,7 +61,8 @@ def L1_setup(learn_options, set_target_fn=set_target):
     learn_options["method"] = "linreg"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
-    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    if "alpha" not in learn_options.keys():
+        learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
     learn_options["loss"] = "squared"
 
     return learn_options
@@ -71,7 +72,8 @@ def L2_setup(learn_options, set_target_fn=set_target):
     learn_options["method"] = "linreg"
     learn_options["penalty"] = "L2"
     learn_options["feature_select"] = False
-    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    if "alpha" not in learn_options.keys():
+        learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
     learn_options["loss"] = "squared"
 
     return learn_options
@@ -92,7 +94,8 @@ def elasticnet_setup(learn_options, set_target_fn=set_target):
     learn_options["penalty"] = "EN"
     learn_options["feature_select"] = False
     learn_options["loss"] = "squared"
-    learn_options["alpha"] = np.array([1e-5*pow(2,x) for x in range(0,30)])
+    if "alpha" not in learn_options.keys():
+        learn_options["alpha"] = np.array([1e-5*pow(2,x) for x in range(0,30)])
     return learn_options
 
 def DNN_setup(learn_options, set_target_fn=set_target):
@@ -121,7 +124,8 @@ def linreg_setup(learn_options, set_target_fn=set_target):
     learn_options["method"] = "linreg"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
-    learn_options["alpha"] = np.array([0.0])
+    if "alpha" not in learn_options.keys():
+        learn_options["alpha"] = np.array([0.0])
     learn_options["loss"] = "squared"
     learn_options = set_target_fn(learn_options, classification=False)
 
@@ -132,7 +136,8 @@ def logregL1_setup(learn_options, set_target_fn=set_target):
     learn_options["method"] = "logregL1"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
-    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    if "alpha" not in learn_options.keys():
+        learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
     return learn_options
 
 def LASSOs_ensemble_setup(learn_options, set_target_fn=set_target):
@@ -140,7 +145,8 @@ def LASSOs_ensemble_setup(learn_options, set_target_fn=set_target):
     learn_options["method"] = "lasso_ensemble"
     learn_options["penalty"] = "L1"
     learn_options["feature_select"] = False
-    learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    if "alpha" not in learn_options.keys():
+        learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
     learn_options["loss"] = "squared"
 
     return learn_options

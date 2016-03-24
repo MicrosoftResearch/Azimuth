@@ -6,7 +6,7 @@ import sklearn.linear_model
 import azimuth.util
 import azimuth.metrics as ranking_metrics
 import azimuth.predict
-
+import numbers
 
 def ARDRegression_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_options):
     '''
@@ -49,15 +49,16 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
 
     assert learn_options['penalty'] == "L1" or learn_options['penalty'] == "L2", "can only use L1 or L2 with logistic regression"
 
+    tol = 0.00001#0.0001
+
     performance = np.zeros((len(learn_options["alpha"]), 1))
     # degenerate_pred = np.zeros((len(learn_options["alpha"])))
     for train_inner, test_inner in cv:
         for i, alpha in enumerate(learn_options["alpha"]):
-            clf = sklearn.linear_model.LogisticRegression(penalty=learn_options['penalty'].lower(), dual=False,
-                                                          fit_intercept=True, class_weight='auto', tol=0.001, C=1.0/alpha)
+            clf = sklearn.linear_model.LogisticRegression(penalty=learn_options['penalty'].lower(), dual=False, fit_intercept=True, class_weight='balanced', tol=tol, C=1.0/alpha)
             clf.fit(X[train][train_inner], y[train][train_inner].flatten())
             #tmp_pred = clf.predict(X[train][test_inner])
-            tmp_pred = clf.predict_proba(X[train][test_inner])[:,0]
+            tmp_pred = clf.predict_proba(X[train][test_inner])[:,1]
 
             if learn_options["training_metric"] == "AUC":
                 fpr, tpr, _ = roc_curve(y_all[learn_options["ground_truth_label"]][train][test_inner], tmp_pred)
@@ -79,6 +80,10 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
 
     best_alpha = learn_options["alpha"][max_score_ind[0]]
 
+    best_alpha = best_alpha[0]
+    if not isinstance(best_alpha, numbers.Number):
+        raise Exception("best_alpha must be a number but is %s" % type(best_alpha))
+
     print "\t\tbest alpha is %f from range=%s" % (best_alpha, learn_options["alpha"][[0, -1]])
     max_perf = np.nanmax(performance)
 
@@ -88,12 +93,12 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
     print "\t\tbest performance is %f" % np.nanmax(performance)
 
     clf = sklearn.linear_model.LogisticRegression(penalty=learn_options['penalty'],
-                                                  dual=False, fit_intercept=True, class_weight='auto',
-                                                  tol=0.001, C=1.0/best_alpha)
+                                                  dual=False, fit_intercept=True, class_weight='balanced',
+                                                  tol=tol, C=1.0/best_alpha)
     clf.fit(X[train], y[train].flatten())
     #y_pred = clf.predict(X[test])
-    y_pred = clf.predict_proba(X[test])[:,0]
-    y_pred = y_pred[:, None]
+    y_pred = clf.predict_proba(X[test])[:,1]
+    y_pred = y_pred[:, None]    
     return y_pred, clf
 
 
