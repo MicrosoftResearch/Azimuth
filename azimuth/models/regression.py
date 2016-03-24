@@ -57,7 +57,7 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
                                                           fit_intercept=True, class_weight='auto', tol=0.001, C=1.0/alpha)
             clf.fit(X[train][train_inner], y[train][train_inner].flatten())
             #tmp_pred = clf.predict(X[train][test_inner])
-            tmp_pred = clf.predict_proba(X[train][test_inner])
+            tmp_pred = clf.predict_proba(X[train][test_inner])[:,0]
 
             if learn_options["training_metric"] == "AUC":
                 fpr, tpr, _ = roc_curve(y_all[learn_options["ground_truth_label"]][train][test_inner], tmp_pred)
@@ -92,7 +92,7 @@ def logreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
                                                   tol=0.001, C=1.0/best_alpha)
     clf.fit(X[train], y[train].flatten())
     #y_pred = clf.predict(X[test])
-    y_pred = clf.predict_proba(X[test])
+    y_pred = clf.predict_proba(X[test])[:,0]
     y_pred = y_pred[:, None]
     return y_pred, clf
 

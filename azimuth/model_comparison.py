@@ -551,7 +551,14 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     inputs, dim, dimsum, feature_names = azimuth.util.concatenate_feature_sets(feature_sets)
 
     # call to scikit-learn, returns a vector of predicted values
-    return model.predict(inputs)
+    preds = model.predict(inputs)
+    unique_preds = np.unique(preds)
+    ok = False
+    for pr in preds:
+        if pr not in [0,1]:
+            ok = True
+    assert ok, "model returned only 0s and 1s"
+    return preds
 
 def override_learn_options(learn_options_override, learn_options):
     """
