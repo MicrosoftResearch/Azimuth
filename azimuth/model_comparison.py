@@ -552,6 +552,8 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
 
     # call to scikit-learn, returns a vector of predicted values
     preds = model.predict(inputs)
+
+    # also check that predictions are not 0/1 from a classifier.predict() (instead of predict_proba() or decision_function())
     unique_preds = np.unique(preds)
     ok = False
     for pr in preds:
