@@ -127,6 +127,7 @@ def get_train_test(test_gene, y_all, train_genes=None):
     train = np.where(train == True)[0]
     return train, test
 
+
 def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_genes=None, CV=True):
     '''
     feature_sets is a dictionary of "set name" to pandas.DataFrame
@@ -157,7 +158,8 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
 
     # concatenate feature sets in to one nparray, and get dimension of each
     inputs, dim, dimsum, feature_names = util.concatenate_feature_sets(feature_sets)
-
+    #import pickle; pickle.dump([y, inputs, feature_names, learn_options], open("saved_models/inputs.p", "wb" )); import ipdb; ipdb.set_trace()
+        
     if not CV:
         assert learn_options['cv'] == 'gene', 'Must use gene-CV when CV is False (I need to use all of the genes and stratified complicates that)'
 
@@ -187,9 +189,9 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
             train_tmp, test_tmp = train_test_tmp
             # not a typo, using training set to test on as well, just for this case. Test set is not used
             # for internal cross-val, etc. anyway.
-            train_test_tmp = (train_tmp, train_tmp)
+            train_test_tmp = (train_tmp, train_tmp)            
             cv.append(train_test_tmp)
-            fold_labels = learn_options['all_genes']
+            fold_labels = ["dummy_for_no_cv"]#learn_options['all_genes']
 
         elif learn_options['train_genes'] is not None and learn_options["test_genes"] is not None:
             assert learn_options['train_genes'] is not None and learn_options['test_genes'] is not None, "use both or neither"
@@ -204,8 +206,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
                 train_test_tmp = get_train_test(gene, y_all)
                 cv.append(train_test_tmp)
             fold_labels = learn_options['all_genes']
-
-
+            
         if learn_options['num_genes_remove_train'] is not None:
             for i, (train,test) in enumerate(cv):
                 unique_genes = np.random.permutation(np.unique(np.unique(y_all['Target gene'][train])))
@@ -354,7 +355,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
 
             print "\t\tRMSE: ", np.sqrt(((y_pred - y[test])**2).mean())
             print "\t\tSpearman correlation: ", util.spearmanr_nonan(y[test], y_pred)[0]
-            print "\t\tfinished fold/gene %i of %i" % (i, len(fold_labels))
+            print "\t\tfinished fold/gene %i of %i" % (i+1, len(fold_labels))
 
 
     cv_median_metric =[np.median(metrics)]

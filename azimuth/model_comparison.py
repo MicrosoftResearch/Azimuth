@@ -138,6 +138,8 @@ def logregL1_setup(learn_options, set_target_fn=set_target):
     learn_options["feature_select"] = False
     if "alpha" not in learn_options.keys():
         learn_options["alpha"] = np.array([1e-6*pow(1.3,x) for x in range(0,100)])
+    if not learn_options.has_key("fit_intercept"):
+        learn_options["fit_intercept"] = True
     return learn_options
 
 def LASSOs_ensemble_setup(learn_options, set_target_fn=set_target):
@@ -285,7 +287,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
 
 def run_models(models, orders, GP_likelihoods=['gaussian', 'warped'], WD_kernel_degrees=[3],
                adaboost_learning_rates=[0.1], adaboost_num_estimators=[100], adaboost_max_depths=[3],
-               learn_options_set=None, test=False, CV=True, setup_function=setup, set_target_fn=set_target, pam_audit=True, length_audit=True):
+               learn_options_set=None, test=False, CV=True, setup_function=setup, set_target_fn=set_target, pam_audit=True, length_audit=True, return_data=False):
 
     '''
     CV is set to false if want to train a final model and not cross-validate, but it goes in to what

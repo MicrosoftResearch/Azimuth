@@ -415,7 +415,7 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
 
 def get_alphabet(order, raw_alphabet = ['A', 'T', 'C', 'G']):
     alphabet = ["".join(i) for i in itertools.product(raw_alphabet, repeat=order)]
-    return alphabet, raw_alphabet
+    return alphabet
 
 def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all', raw_alphabet = ['A', 'T', 'C', 'G']):
     '''
@@ -432,12 +432,12 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
         s = s[:max_index_to_use]
     #assert(len(s)==30, "length not 30")
     #s = s[:30] #cut-off at thirty to clean up extra data that they accidentally left in, and were instructed to ignore in this way
-    alphabet, raw_alphabet = get_alphabet(order, raw_alphabet = raw_alphabet)
+    alphabet = get_alphabet(order, raw_alphabet = raw_alphabet)
     features_pos_dependent = np.zeros(len(alphabet)*(len(s)-(order-1)))
     features_pos_independent = np.zeros(np.power(len(raw_alphabet),order))
 
     for position in range(0, len(s)-order+1, 1):
-        nucl = s[position:position+order]
+        nucl = s[position:position+order]        
         features_pos_dependent[alphabet.index(nucl) + (position*len(alphabet))] = 1.0
         features_pos_independent[alphabet.index(nucl)] += 1.0
     index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
