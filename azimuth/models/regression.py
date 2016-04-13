@@ -22,16 +22,16 @@ def train_linreg_model(alpha, l1r, learn_options, fold, X, y, y_all):
     fold is something like train_inner (boolean array specifying what is in the fold)
     '''
     if learn_options["penalty"] == "L2":
-        clf = sklearn.linear_model.Ridge(alpha=alpha, fit_intercept=True, normalize=True, copy_X=True, max_iter=None, tol=0.001, solver='auto')
+        clf = sklearn.linear_model.Ridge(alpha=alpha, fit_intercept=learn_options["fit_intercept"], normalize=learn_options['normalize_features'], copy_X=True, max_iter=None, tol=0.001, solver='auto')
         weights = get_weights(learn_options, fold, y, y_all)
         clf.fit(X[fold], y[fold], sample_weight=weights)
     elif learn_options["penalty"] == 'EN' or learn_options["penalty"] == 'L1':
         if learn_options["loss"] == "squared":
-            clf = sklearn.linear_model.ElasticNet(alpha=alpha, l1_ratio=l1r, fit_intercept=True, normalize=True, max_iter=3000)
+            clf = sklearn.linear_model.ElasticNet(alpha=alpha, l1_ratio=l1r, fit_intercept=learn_options["fit_intercept"], normalize=learn_options['normalize_features'], max_iter=3000)
         elif learn_options["loss"] == "huber":
             clf = sklearn.linear_model.SGDRegressor('huber', epsilon=0.7, alpha=alpha,
-                                                    l1_ratio=l1r, fit_intercept=True, n_iter=10,
-                                                    penalty='elasticnet', shuffle=True)
+                                                    l1_ratio=l1r, fit_intercept=learn_options["fit_intercept"], n_iter=10,
+                                                    penalty='elasticnet', shuffle=True, normalize=learn_options['normalize_features'])
         clf.fit(X[fold], y[fold])
     return clf
 
@@ -124,6 +124,11 @@ def linreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
 
     if learn_options["weighted"] is not None and (learn_options["penalty"] != "L2" or learn_options["method"] != "linreg"):
         raise NotImplementedError("weighted prediction not implemented for any methods by L2 at the moment")
+        
+    if not learn_options.has_key("fit_intercept"):
+        learn_options["fit_intercept"] = True
+    if not learn_options.has_key('normalize_features'):
+        learn_options['normalize_features'] = True
 
     cv, n_folds = set_up_inner_folds(learn_options, y_all.iloc[train])
 
@@ -190,6 +195,7 @@ def linreg_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_op
     best_alpha, best_l1r = learn_options["alpha"][max_score_ind[0]], l1_ratio[max_score_ind[1]]
 
     print "\t\tbest alpha is %f from range=%s" % (best_alpha, learn_options["alpha"][[0, -1]])
+    
     if learn_options['penalty'] == "EN":
         print "\t\tbest l1_ratio is %f from range=%s" % (best_l1r, l1_ratio[[0, -1]])
     max_perf = np.nanmax(performance)
@@ -270,7 +276,7 @@ def set_up_inner_folds(learn_options, y):
         if 'n_folds' not in learn_options.keys():
             n_folds = len(np.unique(gene_classes))
         else:
-            n_folds = learn_options['n_folds']
+            n_folds = learn_options['n_folds']        
         cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
     elif learn_options["cv"] == "gene":
         gene_list = np.unique(y['Target gene'].values)

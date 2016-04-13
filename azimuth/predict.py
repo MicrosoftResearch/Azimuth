@@ -162,7 +162,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
         
     if not CV:
         assert learn_options['cv'] == 'gene', 'Must use gene-CV when CV is False (I need to use all of the genes and stratified complicates that)'
-
+            
     # set-up for cross-validation
     ## for outer loop, the one Doench et al use genes for
     if learn_options["cv"] == "stratified":
