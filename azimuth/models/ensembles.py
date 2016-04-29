@@ -140,7 +140,7 @@ def randomforest_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, le
     '''
     RandomForestRegressor from scikitlearn.
     '''
-    clf = en.RandomForestRegressor(oob_score=True)
+    clf = en.RandomForestRegressor(oob_score=True, n_jobs=20, n_estimators=1000)
     clf.fit(X[train], y[train][:, 0])
     y_pred = clf.predict(X[test])[:, None]
     return y_pred, clf

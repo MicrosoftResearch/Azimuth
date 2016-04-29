@@ -100,7 +100,7 @@ def convert_to_thirty_one(guide_seq, gene, strand):
         new_mer = new_mer.reverse_complement()
     return str(new_mer)
 
-def concatenate_feature_sets(feature_sets):
+def concatenate_feature_sets(feature_sets, keys=None):
     '''
     Given a dictionary of sets of features, each in a Pandas.DataFrame,
     concatenate them together to form one big np.array, and get the dimension
@@ -108,29 +108,32 @@ def concatenate_feature_sets(feature_sets):
     Returns: inputs, dim
     '''
     assert feature_sets != {}, "no feature sets present"
-    F = feature_sets[feature_sets.keys()[0]].shape[0]
+    if keys is None:
+        keys = feature_sets.keys()
+
+    F = feature_sets[keys[0]].shape[0]
     for set in feature_sets.keys():
         F2 = feature_sets[set].shape[0]
-        assert F == F2, "not same # individuals for features %s and %s" % (feature_sets.keys()[0], set)
+        assert F == F2, "not same # individuals for features %s and %s" % (keys[0], set)
 
-    N = feature_sets[feature_sets.keys()[0]].shape[0]
+    N = feature_sets[keys[0]].shape[0]
     inputs = np.zeros((N, 0))
     feature_names = []
     dim = {}
     dimsum = 0
-    for set in feature_sets.keys():
+    for set in keys:
         inputs_set = feature_sets[set].values
         dim[set] = inputs_set.shape[1]
         dimsum += dim[set]
         inputs = np.hstack((inputs, inputs_set))
         feature_names.extend(feature_sets[set].columns.tolist())
-        
+
     if False:
         inputs.shape
-        for j in feature_sets.keys(): print j + str(feature_sets[j].shape)
-        import ipdb; ipdb.set_trace()       
-    
-    #print "final size of inputs matrix is (%d, %d)" % inputs.shape    
+        for j in keys: print j + str(feature_sets[j].shape)
+        import ipdb; ipdb.set_trace()
+
+    #print "final size of inputs matrix is (%d, %d)" % inputs.shape
     return inputs, dim, dimsum, feature_names
 
 def extract_individual_level_data(one_result):
@@ -296,7 +299,7 @@ def get_ranks(y, thresh=0.8, prefix="", flip=False, col_name='score'):
     # y_quantized = pandas.DataFrame(data=pandas.qcut(y[col_name], 5, labels=np.arange(5.0))) # quantized vector
     y_quantized = y_threshold.copy()
     y_quantized.columns = [prefix + "quantized"]
-    
+
     return y_rank, y_rank_raw, y_threshold, y_quantized
 
 def get_data(data, y_names, organism="human", target_gene=None):
