@@ -22,7 +22,7 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
     '''
     AdaBoostRegressor/Classifier from scikitlearn.
     '''
-        
+
     if learn_options['adaboost_version'] == 'python':
         if not learn_options['adaboost_CV']:
             if not classification:
@@ -41,23 +41,23 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
 
             clf.fit(X[train], y[train].flatten())
             y_pred = clf.predict(X[test])[:, None]
-        else: # optimize the parameters if the adaboosted algorithm                       
+        else: # optimize the parameters if the adaboosted algorithm
 
             if learn_options["algorithm_hyperparam_search"]=="bo":
                 print
 
                 from hyperopt import hp, fmin, tpe, rand
-                                           
+
                 def adaboost_scoring_bo(params):
                     # label_encoder = sklearn.preprocessing.LabelEncoder()
                     # label_encoder.fit(y_all['Target gene'].values[train])
                     # gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
                     # n_folds = len(np.unique(gene_classes))
-                    cv = sklearn.cross_validation.KFold(y_all['Target gene'].values[train].shape[0], n_folds=20, shuffle=True) 
-                    est = en.GradientBoostingRegressor(n_estimators=1000, learning_rate=params['learning_rate'], max_depth=params['max_depth'], 
+                    cv = sklearn.cross_validation.KFold(y_all['Target gene'].values[train].shape[0], n_folds=20, shuffle=True)
+                    est = en.GradientBoostingRegressor(n_estimators=1000, learning_rate=params['learning_rate'], max_depth=params['max_depth'],
                                                        min_samples_leaf=params['min_samples_leaf'], max_features=params['max_features'])
                     scorer = cross_val_score(est, X[train], y[train].flatten(), cv=cv, n_jobs=20)
-                    return np.median(scorer)         
+                    return np.median(scorer)
                 space = {
                         'learning_rate': hp.uniform('learning_rate', 0.001, 0.1),
                          'max_depth': hp.quniform('max_depth', 1, 8, 1),
@@ -66,10 +66,10 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
 
                 best = fmin(adaboost_scoring_bo, space, algo=tpe.suggest, max_evals=50, verbose=1)
                 print best
-                clf = en.GradientBoostingRegressor(n_estimators=learn_options['adaboost_n_estimators'], 
-                                                   learning_rate=best['learning_rate'], 
-                                                   max_depth=best['max_depth'], 
-                                                   min_samples_leaf=best['min_samples_leaf'], 
+                clf = en.GradientBoostingRegressor(n_estimators=learn_options['adaboost_n_estimators'],
+                                                   learning_rate=best['learning_rate'],
+                                                   max_depth=best['max_depth'],
+                                                   min_samples_leaf=best['min_samples_leaf'],
                                                    max_features=best['max_features'])
 
                 clf.fit(X[train], y[train].flatten())
@@ -79,23 +79,26 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
 
                  print "Adaboost with GridSearch"
                  from sklearn.grid_search import GridSearchCV
-                 #param_grid = {'learning_rate': [0.1, 0.05, 0.01],
-                 #              'max_depth': [4, 5, 6, 7],
-                 #              'min_samples_leaf': [5, 7, 10, 12, 15],
+                 param_grid = {'learning_rate': [0.1, 0.05, 0.01],
+                              'max_depth': [4, 5, 6, 7],
+                              'min_samples_leaf': [5, 7, 10, 12, 15],
+                              'n_estimators': [100, 500, 1000, 2000]}
                  #              'max_features': [1.0, 0.5, 0.3, 0.1]}
-                 param_grid = {'learning_rate': [0.1, 0.01],
-                               'max_depth': [4, 7],
-                               'min_samples_leaf': [5, 15],
-                               'max_features': [1.0, 0.1]}
+                 # param_grid = {'n_estimators': [100, ]
+                 #               'learning_rate': [0.1, 0.05, 0.001],
+                 #               'max_depth': [4, 7],
+                 #               'min_samples_leaf': [5, 15],
+                 #               'max_features': [1.0, 0.1]}
 
 
-                 label_encoder = sklearn.preprocessing.LabelEncoder()
-                 label_encoder.fit(y_all['Target gene'].values[train])
-                 gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
-                 n_folds = len(np.unique(gene_classes))
-                 cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
+                 # label_encoder = sklearn.preprocessing.LabelEncoder()
+                 # label_encoder.fit(y_all['Target gene'].values[train])
+                 # gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
+                 n_folds = 10 # len(np.unique(gene_classes))
+                 # cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
+                 cv = sklearn.cross_validation.KFold(y_all.shape[0], n_folds=n_folds, shuffle=True)
 
-                 est = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'], n_estimators=learn_options['adaboost_n_estimators'])
+                 est = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'])#, n_estimators=learn_options['adaboost_n_estimators'])
                  clf = GridSearchCV(est, param_grid, n_jobs=n_jobs, verbose=1, cv=cv, scoring=spearman_scoring, iid=False).fit(X[train], y[train].flatten())
                  print clf.best_params_
             else:
@@ -140,7 +143,7 @@ def randomforest_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, le
     '''
     RandomForestRegressor from scikitlearn.
     '''
-    clf = en.RandomForestRegressor(oob_score=True, n_jobs=20, n_estimators=1000)
+    clf = en.RandomForestRegressor(oob_score=True, n_jobs=20, n_estimators=2000)
     clf.fit(X[train], y[train][:, 0])
     y_pred = clf.predict(X[test])[:, None]
     return y_pred, clf
