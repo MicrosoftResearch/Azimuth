@@ -132,6 +132,7 @@ def concatenate_feature_sets(feature_sets):
         import ipdb; ipdb.set_trace()       
     
     #print "final size of inputs matrix is (%d, %d)" % inputs.shape    
+    assert not np.any(np.isnan(inputs)), "found NaN in inputs"    
     return inputs, dim, dimsum, feature_names
 
 def extract_individual_level_data(one_result):

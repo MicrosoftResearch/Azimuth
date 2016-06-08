@@ -277,6 +277,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
 
     if learn_options.has_key('left_right_guide_ind') and learn_options['left_right_guide_ind'] is not None:
         seq_start, seq_end, expected_length = learn_options['left_right_guide_ind']
+        assert len(Xdf["30mer"].values[0]) == expected_length
         Xdf['30mer'] = Xdf['30mer'].apply(lambda seq: seq[seq_start:seq_end])
 
     feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position, pam_audit=pam_audit, length_audit=length_audit)

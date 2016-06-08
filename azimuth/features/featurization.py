@@ -19,10 +19,11 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
     unique_lengths = np.unique(all_lens)
     num_lengths = len(unique_lengths)
     assert num_lengths == 1, "should only have sequences of a single length, but found %s: %s" % (num_lengths, str(unique_lengths))
+    print "data['30mer'] contains sequences of length %d" % all_lens[0]
 
     print "Constructing features..."
     t0 = time.time()
-
+        
     feature_sets = {}
 
     if learn_options["nuc_features"]:
@@ -64,7 +65,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
         feature_sets["NGGX"] = NGGX_interaction_feature(data, pam_audit)
 
     if learn_options["include_Tm"]:
-        feature_sets["Tm"] = Tm_feature(data, pam_audit)
+        feature_sets["Tm"] = Tm_feature(data, pam_audit, relative_to_23mer = learn_options["Tm_relative_to_23mer"])
 
     if learn_options["include_sgRNAscore"]:
         feature_sets["sgRNA Score"] = pandas.DataFrame(data["sgRNA Score"])
@@ -351,7 +352,7 @@ def gc_cont(seq):
 
 
 
-def Tm_feature(data, pam_audit=True):
+def Tm_feature(data, pam_audit=True, relative_to_23mer=False):
     '''
     assuming '30-mer'is a key
     get melting temperature features from:
@@ -360,16 +361,30 @@ def Tm_feature(data, pam_audit=True):
         2-the Tm of the DNA:RNA hybrid from position 8 - 15 (i.e. 8 nt)
         3-the Tm of the DNA:RNA hybrid from position 3 - 7  (i.e. 5 nt)
     '''
+        
     sequence = data['30mer'].values
     featarray = np.ones((sequence.shape[0],4))
+
     for i, seq in enumerate(sequence):
-        if pam_audit and seq[25:27]!="GG":
-            raise Exception("expected GG but found %s" % seq[25:27])
-        rna = False
-        featarray[i,0] = Tm.Tm_staluc(seq, rna=rna)        #30mer Tm
-        featarray[i,1] = Tm.Tm_staluc(seq[19:24], rna=rna) #5nts immediately proximal of the NGG PAM
-        featarray[i,2] = Tm.Tm_staluc(seq[11:19], rna=rna)   #8-mer
-        featarray[i,3] = Tm.Tm_staluc(seq[6:11], rna=rna)      #5-mer
+        if not relative_to_23mer:
+            assert len(seq) == 30
+            if pam_audit and seq[25:27]!="GG":
+                raise Exception("expected GG but found %s" % seq[25:27])
+            rna = False
+            featarray[i,0] = Tm.Tm_staluc(seq, rna=rna)        #30mer Tm
+            featarray[i,1] = Tm.Tm_staluc(seq[19:24], rna=rna) #5nts immediately proximal of the NGG PAM
+            featarray[i,2] = Tm.Tm_staluc(seq[11:19], rna=rna)   #8-mer
+            featarray[i,3] = Tm.Tm_staluc(seq[6:11], rna=rna)      #5-mer
+        else:
+            assert len(seq) == 23
+            if pam_audit and seq[-2:]!="GG":
+                raise Exception("expected GG but found %s" % seq[-2:])
+            rna = False
+            # this is an offset = 4 relative to above which is a 30mer
+            featarray[i,0] = Tm.Tm_staluc(seq, rna=rna)        #30mer Tm
+            featarray[i,1] = Tm.Tm_staluc(seq[6:10], rna=rna) 
+            featarray[i,2] = Tm.Tm_staluc(seq[15:23], rna=rna) 
+            featarray[i,3] = Tm.Tm_staluc(seq[10:15], rna=rna) 
 
 
     feat = pandas.DataFrame(featarray, index=data.index, columns=["Tm global_%s" % rna, "5mer_end_%s" %rna, "8mer_middle_%s" %rna, "5mer_start_%s" %rna])
