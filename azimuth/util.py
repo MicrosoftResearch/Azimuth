@@ -524,14 +524,40 @@ def feature_importances(results, fontsize=16, figsize=(14, 8)):
         if len(seen) > 0:
             raise Exception("feature name appears more than once: %s" % seen)
 
-        grouped_feat = {'pd_order1' : [i for i,s in enumerate(feature_names) if s.startswith("_pd.Order1")],
-                        'pd_order2' : [i for i,s in enumerate(feature_names) if s.startswith("_pd.Order2")],
-                        'pd_order3' : [i for i,s in enumerate(feature_names) if s.startswith("_pd.Order3")],
-                        'pi_order1' : [i for i,s in enumerate(feature_names) if s.startswith("_pi.Order1")],
-                        'pi_order2' : [i for i,s in enumerate(feature_names) if s.startswith("_pi.Order2")],
-                        'pi_order3' : [i for i,s in enumerate(feature_names) if s.startswith("_pi.Order3")],
-                        'NGGX_pd.Order2' : [i for i,s in enumerate(feature_names) if s.startswith("NGGX_pd.Order2")]
-                        }
+        # grouped_feat = {'pd_order1' : [i for i,s in enumerate(feature_names) if s.startswith("_pd.Order1")],
+        #                 'pd_order2' : [i for i,s in enumerate(feature_names) if s.startswith("_pd.Order2")],
+        #                 'pd_order3' : [i for i,s in enumerate(feature_names) if s.startswith("_pd.Order3")],
+        #                 'pi_order1' : [i for i,s in enumerate(feature_names) if s.startswith("_pi.Order1")],
+        #                 'pi_order2' : [i for i,s in enumerate(feature_names) if s.startswith("_pi.Order2")],
+        #                 'pi_order3' : [i for i,s in enumerate(feature_names) if s.startswith("_pi.Order3")],
+        #                 'NGGX_pd.Order2' : [i for i,s in enumerate(feature_names) if s.startswith("NGGX_pd.Order2")]
+        #                 }
+
+        pd_order1, pi_order1, pd_order2, pi_order2, nggx = [], [], [], [], []
+        for i,s in enumerate(feature_names):
+            if 'False' in s:
+                continue
+            elif "_" in s:
+                nucl, pos = s.split('_')
+                if len(nucl) == 1:
+                    pd_order1.append(i)
+                elif len(nucl) == 2:
+                    pd_order2.append(i)
+            elif "NGGX_pd.Order2" in s:
+                nggx.append(i)
+            else:
+                nucl = s
+                if len(nucl) == 1:
+                    pi_order1.append(i)
+                elif len(nucl) == 2:
+                    pi_order2.append(i)
+
+        grouped_feat = {'pd_order2': pd_order2,
+                        'pi_order2': pi_order2,
+                        'pd_order1': pd_order1,
+                        'pi_order1': pi_order1,
+                        'NGGX_pd.Order2': nggx,}
+
         grouped_feat_ind = []
         [grouped_feat_ind.extend(grouped_feat[a]) for a in grouped_feat.keys()]
         remaining_features_ind = set.difference(set(range(len(feature_names))), set(grouped_feat_ind))

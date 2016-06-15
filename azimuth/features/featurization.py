@@ -10,24 +10,25 @@ import Bio.SeqUtils.MeltingTemp as Tm
 import pickle
 import itertools
 
-def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length_audit=True):
+def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length_audit=True, quiet=True):
     '''
     assumes that data contains the 30mer
     returns set of features from which one can make a kernel for each one
-    '''    
+    '''
     all_lens = data['30mer'].apply(len).values
     unique_lengths = np.unique(all_lens)
     num_lengths = len(unique_lengths)
     assert num_lengths == 1, "should only have sequences of a single length, but found %s: %s" % (num_lengths, str(unique_lengths))
 
-    print "Constructing features..."
+    if not quiet:
+        print "Constructing features..."
     t0 = time.time()
 
     feature_sets = {}
 
     if learn_options["nuc_features"]:
         # spectrum kernels (position-independent) and weighted degree kernels (position-dependent)
-        get_all_order_nuc_features(data['30mer'], feature_sets, learn_options, learn_options["order"], max_index_to_use=30)
+        get_all_order_nuc_features(data['30mer'], feature_sets, learn_options, learn_options["order"], max_index_to_use=30, quiet=quiet)
 
     check_feature_set(feature_sets)
 
@@ -64,7 +65,7 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
         feature_sets["NGGX"] = NGGX_interaction_feature(data, pam_audit)
 
     if learn_options["include_Tm"]:
-        feature_sets["Tm"] = Tm_feature(data, pam_audit)
+        feature_sets["Tm"] = Tm_feature(data, pam_audit, learn_options=None)
 
     if learn_options["include_sgRNAscore"]:
         feature_sets["sgRNA Score"] = pandas.DataFrame(data["sgRNA Score"])
@@ -93,7 +94,8 @@ def featurize_data(data, learn_options, Y, gene_position, pam_audit=True, length
         feature_sets["microhomology"] = get_micro_homology_features(Y['Target gene'], learn_options, data)
 
     t1 = time.time()
-    print "\t\tElapsed time for constructing features is %.2f seconds" % (t1-t0)
+    if not quiet:
+        print "\t\tElapsed time for constructing features is %.2f seconds" % (t1-t0)
 
     check_feature_set(feature_sets)
 
@@ -143,16 +145,19 @@ def NGGX_interaction_feature(data, pam_audit=True):
     return feat_NX.T
 
 
-def get_all_order_nuc_features(data, feature_sets, learn_options, maxorder, max_index_to_use, prefix=""):
+def get_all_order_nuc_features(data, feature_sets, learn_options, maxorder, max_index_to_use, prefix="", quiet=False):
     for order in range(1, maxorder+1):
-        print "\t\tconstructing order %s features" % order
+        if not quiet:
+            print "\t\tconstructing order %s features" % order
         nuc_features_pd, nuc_features_pi = apply_nucleotide_features(data, order, learn_options["num_proc"],
                                                                      include_pos_independent=True, max_index_to_use=max_index_to_use, prefix=prefix)
         feature_sets['%s_nuc_pd_Order%i' % (prefix, order)] = nuc_features_pd
         if learn_options['include_pi_nuc_feat']:
             feature_sets['%s_nuc_pi_Order%i' % (prefix, order)] = nuc_features_pi
         check_feature_set(feature_sets)
-        print "\t\t\t\t\t\t\tdone"
+
+        if not quiet:
+            print "\t\t\t\t\t\t\tdone"
 
 
 def countGC(s, length_audit=True):
@@ -351,7 +356,7 @@ def gc_cont(seq):
 
 
 
-def Tm_feature(data, pam_audit=True):
+def Tm_feature(data, pam_audit=True, learn_options=None):
     '''
     assuming '30-mer'is a key
     get melting temperature features from:
@@ -360,6 +365,12 @@ def Tm_feature(data, pam_audit=True):
         2-the Tm of the DNA:RNA hybrid from position 8 - 15 (i.e. 8 nt)
         3-the Tm of the DNA:RNA hybrid from position 3 - 7  (i.e. 5 nt)
     '''
+
+    if learn_options is None or 'Tm segments' not in learn_options.keys():
+        segments = [(19, 24), (11, 19), (6, 11)]
+    else:
+        segments = learn_options['Tm segments']
+
     sequence = data['30mer'].values
     featarray = np.ones((sequence.shape[0],4))
     for i, seq in enumerate(sequence):
@@ -367,9 +378,9 @@ def Tm_feature(data, pam_audit=True):
             raise Exception("expected GG but found %s" % seq[25:27])
         rna = False
         featarray[i,0] = Tm.Tm_staluc(seq, rna=rna)        #30mer Tm
-        featarray[i,1] = Tm.Tm_staluc(seq[19:24], rna=rna) #5nts immediately proximal of the NGG PAM
-        featarray[i,2] = Tm.Tm_staluc(seq[11:19], rna=rna)   #8-mer
-        featarray[i,3] = Tm.Tm_staluc(seq[6:11], rna=rna)      #5-mer
+        featarray[i,1] = Tm.Tm_staluc(seq[segments[0][0]:segments[0][1]], rna=rna) #5nts immediately proximal of the NGG PAM
+        featarray[i,2] = Tm.Tm_staluc(seq[segments[1][0]:segments[1][1]], rna=rna)   #8-mer
+        featarray[i,3] = Tm.Tm_staluc(seq[segments[2][0]:segments[2][1]], rna=rna)      #5-mer
 
 
     feat = pandas.DataFrame(featarray, index=data.index, columns=["Tm global_%s" % rna, "5mer_end_%s" %rna, "8mer_middle_%s" %rna, "5mer_start_%s" %rna])
@@ -403,10 +414,10 @@ def apply_nucleotide_features(seq_data_frame, order, num_proc, include_pos_indep
 
     fast = True
     if include_pos_independent:
-        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))        
-        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))            
-        assert not np.any(np.isnan(feat_pd)), "nans here can arise from sequences of different lengths"           
-        assert not np.any(np.isnan(feat_pi)), "nans here can arise from sequences of different lengths"           
+        feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
+        feat_pi = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_independent'))
+        assert not np.any(np.isnan(feat_pd)), "nans here can arise from sequences of different lengths"
+        assert not np.any(np.isnan(feat_pi)), "nans here can arise from sequences of different lengths"
         return feat_pd, feat_pi
     else:
         feat_pd = seq_data_frame.apply(nucleotide_features, args=(order, max_index_to_use, prefix, 'pos_dependent'))
@@ -425,9 +436,9 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
     '''
     assert feature_type in ['all', 'pos_independent', 'pos_dependent']
     if max_index_to_use <= len(s):
-        #print "WARNING: trimming max_index_to use down to length of string=%s" % len(s)        
+        #print "WARNING: trimming max_index_to use down to length of string=%s" % len(s)
         max_index_to_use = len(s)
-    
+
     if max_index_to_use is not None:
         s = s[:max_index_to_use]
     #assert(len(s)==30, "length not 30")
@@ -436,11 +447,27 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
     features_pos_dependent = np.zeros(len(alphabet)*(len(s)-(order-1)))
     features_pos_independent = np.zeros(np.power(len(raw_alphabet),order))
 
+    index_dependent = []
+    index_independent = []
+    # index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
+    #index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
+
     for position in range(0, len(s)-order+1, 1):
-        nucl = s[position:position+order]        
+        for l in alphabet:
+            index_dependent.append('%s%s_%d' % (prefix, l, position))
+
+    for l in alphabet:
+        index_independent.append('%s%s' % (prefix, l))
+
+    for position in range(0, len(s)-order+1, 1):
+        nucl = s[position:position+order]
         features_pos_dependent[alphabet.index(nucl) + (position*len(alphabet))] = 1.0
         features_pos_independent[alphabet.index(nucl)] += 1.0
-    index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
+
+        # this is to check that the labels in the pd df actually match the nucl and position
+        assert index_dependent[alphabet.index(nucl) + (position*len(alphabet))] == '%s%s_%d' % (prefix, nucl, position)
+        assert index_independent[alphabet.index(nucl)] == '%s%s' % (prefix, nucl)
+
 
     if np.any(np.isnan(features_pos_dependent)):
         raise Exception("found nan features in features_pos_dependent")
@@ -448,7 +475,6 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
         raise Exception("found nan features in features_pos_independent")
 
     if feature_type == 'all' or feature_type == 'pos_independent':
-        index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
         if feature_type == 'all':
             res = pandas.Series(features_pos_dependent,index=index_dependent), pandas.Series(features_pos_independent,index=index_independent)
             assert not np.any(np.isnan(res.values))

@@ -96,10 +96,11 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
                  # gene_classes = label_encoder.transform(y_all['Target gene'].values[train])
                  n_folds = 10 # len(np.unique(gene_classes))
                  # cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
-                 cv = sklearn.cross_validation.KFold(y_all.shape[0], n_folds=n_folds, shuffle=True)
+                 cv = sklearn.cross_validation.KFold(X[train].shape[0], n_folds=n_folds, shuffle=True)
 
                  est = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'])#, n_estimators=learn_options['adaboost_n_estimators'])
-                 clf = GridSearchCV(est, param_grid, n_jobs=n_jobs, verbose=1, cv=cv, scoring=spearman_scoring, iid=False).fit(X[train], y[train].flatten())
+                 clf = GridSearchCV(est, param_grid, n_jobs=n_jobs, verbose=1, cv=cv, scoring=spearman_scoring, iid=False)
+                 clf.fit(X[train], y[train].flatten())
                  print clf.best_params_
             else:
                 raise Exception("if using adaboost_CV then need to specify grid (grid search) or bo (bayesian optimization)")
