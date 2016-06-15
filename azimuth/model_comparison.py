@@ -277,6 +277,7 @@ def setup(test=False, order=1, learn_options=None, data_file=None, pam_audit=Tru
 
     if learn_options.has_key('left_right_guide_ind') and learn_options['left_right_guide_ind'] is not None:
         seq_start, seq_end, expected_length = learn_options['left_right_guide_ind']
+        assert len(Xdf["30mer"].values[0]) == expected_length
         Xdf['30mer'] = Xdf['30mer'].apply(lambda seq: seq[seq_start:seq_end])
 
     feature_sets = feat.featurize_data(Xdf, learn_options, Y, gene_position, pam_audit=pam_audit, length_audit=length_audit)
@@ -511,7 +512,7 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
     # assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
     assert isinstance(seq, (np.ndarray)), "Please ensure seq is a numpy array"
     assert len(seq[0]) > 0, "Make sure that seq is not empty"
-    assert isinstance(seq[0], str), "Please ensure input sequences are in string format, i.e. 'AGAG' rather than ['A' 'G' 'A' 'G'] or alternate representations"
+    assert isinstance(seq[0], basestring), "Please ensure input sequences are in string format, i.e. 'AGAG' rather than ['A' 'G' 'A' 'G'] or alternate representations"
 
     if aa_cut is not None:
         assert len(aa_cut) > 0, "Make sure that aa_cut is not empty"

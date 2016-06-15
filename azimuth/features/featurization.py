@@ -373,6 +373,7 @@ def Tm_feature(data, pam_audit=True, learn_options=None):
 
     sequence = data['30mer'].values
     featarray = np.ones((sequence.shape[0],4))
+
     for i, seq in enumerate(sequence):
         if pam_audit and seq[25:27]!="GG":
             raise Exception("expected GG but found %s" % seq[25:27])
