@@ -31,7 +31,7 @@ def get_pval_from_predictions(m0_predictions, m1_predictions, ground_truth, twot
     '''
     import corrstats
     n0 = len(m0_predictions)
-    n1 = len(m0_predictions)
+    n1 = len(m1_predictions)
     n2 = len(ground_truth)
     assert(n0==n1)
     assert(n0==n2)
