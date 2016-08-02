@@ -580,15 +580,15 @@ def override_learn_options(learn_options_override, learn_options):
             learn_options[k] = learn_options_override[k]
     return learn_options
 
-def fill_learn_options(learn_options_fill, learn_options):
+def fill_learn_options(learn_options_used_to_fill, learn_options_with_possible_missing):
     """
-    only fill in keys that are missing form learn_options from learn_options_fill
+    only fill in keys that are missing from learn_options from learn_options_fill
     """
-    if learn_options_fill is not None:
-        for k in learn_options_fill.keys():
-            if not learn_options.has_key(k):
-                learn_options[k] = learn_options_fill[k]
-    return learn_options
+    if learn_options_used_to_fill is not None:
+        for k in learn_options_used_to_fill.keys():
+            if not learn_options_with_possible_missing.has_key(k):
+                learn_options_with_possible_missing[k] = learn_options_used_to_fill[k]
+    return learn_options_with_possible_missing
 
 
 def write_results(predictions, file_to_predict):

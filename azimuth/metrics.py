@@ -236,10 +236,13 @@ def ndcg_at_k(r, k, method=0):
 ## ------------------------------------------------------------------------------------
 ## custom stuff from us to avoid problem with ties
 
-def ndcg_at_k_ties(labels, predictions, k, method=0):
+def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=False):
     '''
     See 2008 McSherry et al on how to efficiently compute NDCG with ties
     labels are ground truth
+
+    set normalize_from_below_too=False for conventional ndcg_at_k_ties, but note this will only
+    ensure the max is 1, not that the min is zero. to get that added guarantee, set this argument to True
     '''
 
     labels = labels.copy()
@@ -257,8 +260,13 @@ def ndcg_at_k_ties(labels, predictions, k, method=0):
     dcg_max = dcg_at_k_ties(labels, labels, k, method)
     # NOTE: I have checked that dcg_at_k_ties and dcg_at_k match when there are no ties, or ties in the labels
 
-    ndcg = dcg / dcg_max
-
+    if not normalize_from_below_too:
+        ndcg = dcg / dcg_max
+    else:        
+        dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method)        
+        ndcg = (dcg - dcg_min) / (dcg_max - dcg_min)
+        assert ndcg <= 1.0 and ndcg >= 0.0, "ndcg=%f should be in [0,1]" % ndcg
+                
     if not dcg_max:
         return 0.
     #assert ndcg >= (0.0 - 1e-8) and ndcg <= (1.0 + 1e-8), "ndcg should be between 0 and 1"
@@ -267,12 +275,12 @@ def ndcg_at_k_ties(labels, predictions, k, method=0):
 
 def dcg_at_k_ties(labels, predictions, k, method=0):
     '''
-    See 2008 McSherry et al on how to efficiently compute NDCG (method=0 here) with ties
-    labels are what the "ground truth" judges assign
-    predictions are the algorithm predictions corresponding to each label
+    See 2008 McSherry et al on how to efficiently compute NDCG (method=0 here) with ties (in the predictions)
+    'labels' are what the "ground truth" judges assign
+    'predictions' are the algorithm predictions corresponding to each label
     Also, http://en.wikipedia.org/wiki/Discounted_cumulative_gain for basic defns
     '''
-
+    assert isinstance(predictions,np.ndarray)
     assert len(labels) == len(predictions), "labels and predictions should be of same length"
     assert k <= len(labels), "k should be <= len(labels)"
     # order both labels and preds so that they are in order of decreasing predictive score
@@ -280,11 +288,15 @@ def dcg_at_k_ties(labels, predictions, k, method=0):
     predictions = predictions[sorted_ind]
     labels = labels[sorted_ind]
 
-    def gain(label, method=0):
+    def gain(label, method):
         if method==0:
             return label
         elif method==1:
             return 2**label-1.0
+        elif method==2 or method==3:
+            return label
+        else:
+            raise NotImplementedError()
 
     if method==0:
         discount_factors = get_discount_factors(len(labels), discount='log2')
@@ -300,18 +312,18 @@ def dcg_at_k_ties(labels, predictions, k, method=0):
     #step through, in current order (of decreasing predictions), accumulating tied gains (which may be singletons)
     ii = 0
     dcg = 0.0
-    while (ii < k):
+    while (ii < k):        
         current_pred = predictions[ii]
-        current_gain = gain(labels[ii])
+        current_gain = gain(labels[ii], method)
         # intializing the tied cumulative variables
         cum_tied_gain = current_gain
         cum_tied_disc = discount_factors[ii]
         num_ties = 1
         ii += 1
-        # count number of ties
+        # count number of ties in predictions
         while (ii<len(predictions) and predictions[ii]==current_pred):  #while tied
             num_ties += 1.0
-            cum_tied_gain += gain(labels[ii])
+            cum_tied_gain += gain(labels[ii], method)
             if ii < k: cum_tied_disc += discount_factors[ii]
             ii += 1
         #if len(np.unique(predictions))==1:  import ipdb; ipdb.set_trace()
@@ -382,10 +394,24 @@ if __name__ == "__main__":
     truth = np.array([3, 4, 2, 1, 0, 0, 0])
     pred1 = np.array([3, 4, 2, 1, 0, 0, 0])
     pred2 = np.array([2, 1, 3, 4, 5, 6, 7])
+    
+    truth3 = np.array([3, 4, 2, 1, 0, 0, 0])
+    truth4 = np.zeros(7); truth4[0] = 1
+    pred3 = np.array([2, 1, 3, 4, 5, 6, 7])*10
+    k = len(pred3)
+
+    #print ndcg_at_k_ties(truth, truth, k, method=0, normalize_from_below_too=True)
+    #print ndcg_at_k_ties(truth, pred2, k, method=0, normalize_from_below_too=True)
+    #print ndcg_at_k_ties(truth, pred3, k, method=0, normalize_from_below_too=True)
+    #print ndcg_at_k_ties(truth3, pred3, k, method=3, normalize_from_below_too=True)
+    print ndcg_at_k_ties(truth4, pred2, k, method=3, normalize_from_below_too=True)
+
+    import ipdb; ipdb.set_trace()
 
     print ndcg_alt(truth[np.argsort(pred2)[::-1]], 5)
     print ndcg_at_k(truth[np.argsort(pred2)[::-1]], 5, method=1)
     print ndcg_at_k(truth[np.argsort(pred2)[::-1]], 5, method=0)
-
+           
     print ndcg_at_k_ties(truth, pred2, 5, method=1)
     print ndcg_at_k_ties(truth, pred2, 5, method=0)
+
