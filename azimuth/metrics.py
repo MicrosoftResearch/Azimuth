@@ -253,7 +253,8 @@ def ndcg_at_k_ties(labels, predictions, k, method=0):
 
     # this one is the vanilla computation that ignores ties (and should match dcg_at_k_ties when no ties are present):
     # highest-to-lowest of the true labels (i.e. best first)
-    dcg_max = dcg_at_k(sorted(labels, reverse=True), k, method)
+    # dcg_max = dcg_at_k(sorted(labels, reverse=True), k, method)
+    dcg_max = dcg_at_k_ties(labels, labels, k, method)
     # NOTE: I have checked that dcg_at_k_ties and dcg_at_k match when there are no ties, or ties in the labels
 
     ndcg = dcg / dcg_max
@@ -286,9 +287,14 @@ def dcg_at_k_ties(labels, predictions, k, method=0):
             return 2**label-1.0
 
     if method==0:
-        discount_factors = get_discount_factors(labels)
+        discount_factors = get_discount_factors(len(labels), discount='log2')
     elif method==1:
         raise Exception("need to implement: log_2(i+1)")
+    elif method==2:
+        discount_factors = get_discount_factors(len(labels), discount='linear')
+    elif method==3:
+        discount_factors = get_discount_factors(len(labels), discount='combination')
+        
     assert len(discount_factors) == len(labels), "discount factors has wrong length"
 
     #step through, in current order (of decreasing predictions), accumulating tied gains (which may be singletons)
@@ -315,9 +321,18 @@ def dcg_at_k_ties(labels, predictions, k, method=0):
     assert not np.isnan(dcg), "found nan dcg"
     return dcg
 
-def get_discount_factors(labels):
-    ii_range = np.arange(len(labels)) + 1
-    discount_factors = np.concatenate((np.array([1.0]), 1.0/np.log2(ii_range[1:])))
+def get_discount_factors(num_labels, discount='log2'):
+    ii_range = np.arange(num_labels) + 1
+
+    if discount == 'log2':
+        discount_factors = np.concatenate((np.array([1.0]), 1.0/np.log2(ii_range[1:])))
+    elif discount == 'linear':
+        discount_factors = -ii_range/float(num_labels) + 1.0
+    elif discount == 'combination':
+        l2 = np.concatenate((np.array([1.0]), 1.0/np.log2(ii_range[1:])))
+        linear = -ii_range/float(num_labels) + 1.0
+        discount_factors = np.max((l2,linear), axis=0)
+
     return discount_factors
 
 def rank_data(r, rground):
