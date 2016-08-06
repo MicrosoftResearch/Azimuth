@@ -236,7 +236,7 @@ def ndcg_at_k(r, k, method=0):
 ## ------------------------------------------------------------------------------------
 ## custom stuff from us to avoid problem with ties
 
-def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=False):
+def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=False, theta=None):
     '''
     See 2008 McSherry et al on how to efficiently compute NDCG with ties
     labels are ground truth
@@ -252,28 +252,29 @@ def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=Fa
     #     labels += np.abs(labels.min() + 1e-5)
 
     # this is the one with ties:
-    dcg = dcg_at_k_ties(labels, predictions, k, method=method)
+    dcg = dcg_at_k_ties(labels, predictions, k, method=method, theta=theta)
 
     # this one is the vanilla computation that ignores ties (and should match dcg_at_k_ties when no ties are present):
     # highest-to-lowest of the true labels (i.e. best first)
     # dcg_max = dcg_at_k(sorted(labels, reverse=True), k, method)
-    dcg_max = dcg_at_k_ties(labels, labels, k, method)
+    dcg_max = dcg_at_k_ties(labels, labels, k, method, theta=theta)
     # NOTE: I have checked that dcg_at_k_ties and dcg_at_k match when there are no ties, or ties in the labels
 
     if not normalize_from_below_too:
         ndcg = dcg / dcg_max
-    else:        
-        dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method)        
+    else:
+        dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta=theta)
         ndcg = (dcg - dcg_min) / (dcg_max - dcg_min)
+            
         assert ndcg <= 1.0 and ndcg >= 0.0, "ndcg=%f should be in [0,1]" % ndcg
-                
+
     if not dcg_max:
         return 0.
     #assert ndcg >= (0.0 - 1e-8) and ndcg <= (1.0 + 1e-8), "ndcg should be between 0 and 1"
 
     return ndcg
 
-def dcg_at_k_ties(labels, predictions, k, method=0):
+def dcg_at_k_ties(labels, predictions, k, method=0, theta=None):
     '''
     See 2008 McSherry et al on how to efficiently compute NDCG (method=0 here) with ties (in the predictions)
     'labels' are what the "ground truth" judges assign
@@ -293,7 +294,7 @@ def dcg_at_k_ties(labels, predictions, k, method=0):
             return label
         elif method==1:
             return 2**label-1.0
-        elif method==2 or method==3:
+        elif method==2 or method==3 or method==4:
             return label
         else:
             raise NotImplementedError()
@@ -306,13 +307,18 @@ def dcg_at_k_ties(labels, predictions, k, method=0):
         discount_factors = get_discount_factors(len(labels), discount='linear')
     elif method==3:
         discount_factors = get_discount_factors(len(labels), discount='combination')
-        
+    elif method==4:
+        assert theta is not None, "need to specify theta"
+        discount_factors = get_discount_factors(len(labels), discount='1/rtheta', theta=theta)
+    else:
+        raise NotImplementedError()
+
     assert len(discount_factors) == len(labels), "discount factors has wrong length"
 
     #step through, in current order (of decreasing predictions), accumulating tied gains (which may be singletons)
     ii = 0
     dcg = 0.0
-    while (ii < k):        
+    while (ii < k):
         current_pred = predictions[ii]
         current_gain = gain(labels[ii], method)
         # intializing the tied cumulative variables
@@ -333,7 +339,7 @@ def dcg_at_k_ties(labels, predictions, k, method=0):
     assert not np.isnan(dcg), "found nan dcg"
     return dcg
 
-def get_discount_factors(num_labels, discount='log2'):
+def get_discount_factors(num_labels, discount='log2', theta=None):
     ii_range = np.arange(num_labels) + 1
 
     if discount == 'log2':
@@ -344,6 +350,10 @@ def get_discount_factors(num_labels, discount='log2'):
         l2 = np.concatenate((np.array([1.0]), 1.0/np.log2(ii_range[1:])))
         linear = -ii_range/float(num_labels) + 1.0
         discount_factors = np.max((l2,linear), axis=0)
+    elif discount == '1/rtheta':
+        discount_factors = 1./(ii_range**theta)
+    else:
+        raise NotImplementedError
 
     return discount_factors
 
@@ -394,7 +404,7 @@ if __name__ == "__main__":
     truth = np.array([3, 4, 2, 1, 0, 0, 0])
     pred1 = np.array([3, 4, 2, 1, 0, 0, 0])
     pred2 = np.array([2, 1, 3, 4, 5, 6, 7])
-    
+
     truth3 = np.array([3, 4, 2, 1, 0, 0, 0])
     truth4 = np.zeros(7); truth4[0] = 1
     pred3 = np.array([2, 1, 3, 4, 5, 6, 7])*10
@@ -411,7 +421,6 @@ if __name__ == "__main__":
     print ndcg_alt(truth[np.argsort(pred2)[::-1]], 5)
     print ndcg_at_k(truth[np.argsort(pred2)[::-1]], 5, method=1)
     print ndcg_at_k(truth[np.argsort(pred2)[::-1]], 5, method=0)
-           
+
     print ndcg_at_k_ties(truth, pred2, 5, method=1)
     print ndcg_at_k_ties(truth, pred2, 5, method=0)
-
