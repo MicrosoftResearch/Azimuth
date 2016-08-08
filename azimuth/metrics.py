@@ -537,9 +537,13 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
                 plt.show()
 
         # Also compute p-value and distribution for a test-statistic which is the sum in ndcg_diff over the entire theta_range 
+        ndcg1["all"] = 0
+        ndcg2["all"] = 0
         real_ndcg_diff["all"] = 0
         perm_ndcg_diff["all"] = np.nan*np.zeros(nperm)
         for theta in theta_range: 
+            ndcg1["all"] += ndcg1[theta]
+            ndcg2["all"] += ndcg2[theta]
             real_ndcg_diff["all"] += real_ndcg_diff[theta]
             perm_ndcg_diff["all"] = perm_ndcg_diff["all"] + perm_ndcg_diff[theta]
         real_ndcg_diff["all"] = real_ndcg_diff["all"]/len(theta_range)
@@ -554,13 +558,9 @@ if __name__ == "__main__":
     import cPickle as pickle
     import matplotlib.pyplot as plt
 
-    simulated_data = True
-    permute_real_data = False
-
-    # only for simulated data
-    N = 100 
-    frac_zeros = 0
-    
+    simulated_data = False
+    permute_real_data = True
+        
     T = 100
     allp = np.nan*np.ones(T)
 
@@ -569,9 +569,13 @@ if __name__ == "__main__":
     #theta_range = [0.5, 0.6]; 
     theta_range = thetas=np.logspace(np.log10(0.01), np.log10(1.0), 3)  # Nicolo uses 10, so I grab the extremes and middle
 
+    # only for simulated data
+    N = 100
+    frac_zeros = 0
+    
     k = None
 
-    allp = np.nan*np.zeros((len(theta_range), T))
+    allp = np.nan*np.zeros((len(theta_range) + 1, T))
 
     if not simulated_data:
         print "loading up saved data..." # two-fold CV data from CRISPR off-target GUIDE-SEQ
@@ -593,20 +597,21 @@ if __name__ == "__main__":
             pred1 = predictions["CFD"][fold]
             pred2 = predictions["product"][fold]
                         
-            if not permute_real_data:
+            if permute_real_data:
                 truth = np.random.permutation(truth)
 
         t0 = time.time()
         pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred2, truth, nperm, method, k, normalize_from_below_too, theta_range=theta_range)
         t1 = time.time()
-        for i, theta in enumerate(theta_range):
-            print "%d, theta=%f) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f, elapsed time=%f minutes, smallest_p=%f" % (t, theta, ndcg1[theta], ndcg2[theta], real_ndcg_diff[theta], pval[theta], (t1-t0)/60, 1.0/nperm)        
+
+        for i, theta in enumerate(theta_range.tolist() + ["all"]):
+            print "%d, theta=%s) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f, elapsed time=%f minutes, smallest_p=%f" % (t, str(theta), ndcg1[theta], ndcg2[theta], real_ndcg_diff[theta], pval[theta], (t1-t0)/60, 1.0/nperm)        
             allp[i, t] = pval[theta]
         print "---------------"
         
-    for i, theta in enumerate(theta_range + ["all"]):
-        mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d, \theta=%s" % (T, nperm, N, str(theta))
-        ut.qqplotp(allp[i,:], dohist=True, numbins=10, figsize=[7,7], title=mytitle, markersize=5)
+    for i, theta in enumerate(theta_range.tolist() + ["all"]):
+        mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d, theta=%s" % (T, nperm, N, str(theta))
+        ut.qqplotp(allp[i,:], dohist=True, numbins=10, figsize=[6,6], title=mytitle, markersize=5)
         plt.show()
     
 
