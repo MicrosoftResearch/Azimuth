@@ -14,7 +14,7 @@ import numpy as np
 import scipy as sp
 import scipy.stats
 import util as ut
-
+import time
 
 def mean_reciprocal_rank(rs):
     """Score is reciprocal of the rank of the first relevant item
@@ -497,13 +497,14 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
 
 
 if __name__ == "__main__":
+    import cPickle as pickle
     import matplotlib.pyplot as plt
+
+    N = 100
+    frac_zeros = 0.9
     
     T = 100
-    N = 100
     allp = np.nan*np.ones(T)
-
-    frac_zeros = 0.9
 
     nperm = 100
     method = 4; theta = 0.5; normalize_from_below_too = True    
@@ -511,15 +512,30 @@ if __name__ == "__main__":
         
     for t in range(T):
 
-        truth = np.random.rand(N)
-        zero_ind = np.random.rand(N) < frac_zeros
-        truth[zero_ind] = 0
+        if False:
+            truth = np.random.rand(N)
+            zero_ind = np.random.rand(N) < frac_zeros
+            truth[zero_ind] = 0
+            pred1 = np.random.rand(N)
+            pred2 = np.random.rand(N)
+        else:
+            print "loading up saved data..."
+            with open(r'\\nerds5\kevin\from_nicolo\gs.pickle','rb') as f:  predictions, truth_all = pickle.load(f)
+            print "done."
+                                
+            fold = 0
+            truth = truth_all[fold]
+            pred1 = predictions["CFD"][fold]
+            pred2 = predictions["product"][fold]
+            
+            use_real = False
+            if not use_real:
+                truth = np.random.permutation(truth)
 
-        pred1 = np.random.rand(N)
-        pred2 = np.random.rand(N)
-        
+        t0 = time.time()
         pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred2, truth, nperm, method, k, normalize_from_below_too, theta=theta, seed = "78923")
-        print "%d) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f" % (t, ndcg1, ndcg2, real_ndcg_diff, pval)
+        t1 = time.time()
+        print "%d) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f, elapsed time=%f, smallest_p=%f" % (t, ndcg1, ndcg2, real_ndcg_diff, pval, 1.0/nperm, t1-t0)
         allp[t] = pval
         
     mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d" % (T, nperm, N)
