@@ -413,7 +413,7 @@ def ndcg_bootstrap_test(preds1, preds2, true_labels, num_bootstrap, method, k, n
 
     return pv
 
-def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, normalize_from_below_too, theta=None, seed = "78923"):
+def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, normalize_from_below_too, theta=None, balance_zeros=True, seed = "78923"):
             
         # pVal is the probability that we would observe as big an AUC diff as we
         # did if the ROC curves were drawn from the null hypothesis (which is that 
@@ -423,6 +423,8 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
         # number of them with each other. 
         #
         # see ndcg_at_k_ties for all but the first four parameters
+        #
+        # balance_zeros = True means that when we swap a zero for a non-zero value, we will also do a reverse swap
         #
         # this is a two-sided test, but since it is a symmetric null distribution, one should
         # be able to divide the p-value by 2 to get the one-sided version (but think this through before using)
@@ -464,6 +466,9 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
         if False:#np.all(preds1 == preds2):
             pval = 1.0            
         else:                    
+            zero_ind = true_labels == 0
+            assert np.sum(zero_ind) < len(zero_ind), "balancing assumes there are more zeros than ones"
+
             for t in range(nperm):
                 pair_ind_to_swap = np.random.rand(N) < 0.5
 
@@ -494,8 +499,8 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     
-    T = 100
-    N = 100
+    T = 1000
+    N = 1000
     allp = np.nan*np.ones(T)
 
     frac_zeros = 0.9
@@ -511,12 +516,7 @@ if __name__ == "__main__":
         truth[zero_ind] = 0
 
         pred1 = np.random.rand(N)
-        zero_ind = np.random.rand(N) < frac_zeros
-        pred1[zero_ind] = 0
-
         pred2 = np.random.rand(N)
-        zero_ind = np.random.rand(N) < frac_zeros
-        pred2[zero_ind] = 0
         
         pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred2, truth, nperm, method, k, normalize_from_below_too, theta=theta, seed = "78923")
         print "%d) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f" % (t, ndcg1, ndcg2, real_ndcg_diff, pval)
