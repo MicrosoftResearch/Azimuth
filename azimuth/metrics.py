@@ -535,6 +535,17 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
                 plt.plot(np.sort(perm_ndcg_diff), '.')
                 plt.plot(real_ndcg_diff*np.ones(perm_ndcg_diff.shape), 'k-')
                 plt.show()
+
+        # Also compute p-value and distribution for a test-statistic which is the sum in ndcg_diff over the entire theta_range 
+        real_ndcg_diff["all"] = 0
+        perm_ndcg_diff["all"] = np.nan*np.zeros(nperm)
+        for theta in theta_range: 
+            real_ndcg_diff["all"] += real_ndcg_diff[theta]
+            perm_ndcg_diff["all"] = perm_ndcg_diff["all"] + perm_ndcg_diff[theta]
+        real_ndcg_diff["all"] = real_ndcg_diff["all"]/len(theta_range)
+        perm_ndcg_diff["all"] = perm_ndcg_diff["all"]/len(theta_range)
+        num_stat_greater = np.max((((perm_ndcg_diff["all"] > real_ndcg_diff["all"]).sum() + 1), 1.0))
+        pval["all"] = num_stat_greater / nperm
                         
         return pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2
 
@@ -593,8 +604,8 @@ if __name__ == "__main__":
             allp[i, t] = pval[theta]
         print "---------------"
         
-    for i, theta in enumerate(theta_range):
-        mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d, \theta=%f" % (T, nperm, N, theta)
+    for i, theta in enumerate(theta_range + ["all"]):
+        mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d, \theta=%s" % (T, nperm, N, str(theta))
         ut.qqplotp(allp[i,:], dohist=True, numbins=10, figsize=[7,7], title=mytitle, markersize=5)
         plt.show()
     
