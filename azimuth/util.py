@@ -1,5 +1,6 @@
 import pandas
 import matplotlib.pylab as plt
+import pylab as pl # so can just grab qqplotting code from fastlmm directly
 import scipy.stats
 import scipy as sp
 import numpy as np
@@ -24,6 +25,223 @@ import util
 import sys
 import pandas as pd
 import corrstats
+
+def qqplot(pvals, fileout = None, alphalevel = 0.05,legend=None,xlim=None,ylim=None,fixaxes=True,addlambda=True,minpval=1e-20,title=None,h1=None,figsize=[5,5],grid=True, markersize=2):
+    '''
+    performs a P-value QQ-plot in -log10(P-value) space
+    -----------------------------------------------------------------------
+    Args:
+        pvals       P-values, for multiple methods this should be a list (each element will be flattened)
+        fileout    if specified, the plot will be saved to the file (optional)
+        alphalevel  significance level for the error bars (default 0.05)
+                    if None: no error bars are plotted
+        legend      legend string. For multiple methods this should be a list
+        xlim        X-axis limits for the QQ-plot (unit: -log10)
+        ylim        Y-axis limits for the QQ-plot (unit: -log10)
+        fixaxes    Makes xlim=0, and ylim=max of the two ylimits, so that plot is square
+        addlambda   Compute and add genomic control to the plot, bool
+        title       plot title, string (default: empty)
+        h1          figure handle (default None)
+        figsize     size of the figure. (default: [5,5])
+        grid        boolean: use a grid? (default: True)
+    Returns:   fighandle, qnull, qemp
+    -----------------------------------------------------------------------
+    '''    
+    distr = 'log10'
+    import pylab as pl
+    if type(pvals)==list:
+        pvallist=pvals
+    else:
+        pvallist = [pvals]
+    if type(legend)==list:
+        legendlist=legend
+    else:
+        legendlist = [legend]
+    
+    if h1 is None:
+        h1=pl.figure(figsize=figsize) 
+    
+    pl.grid(b=grid, alpha = 0.5)
+         
+    maxval = 0
+
+    for i in xrange(len(pvallist)):        
+        pval =pvallist[i].flatten()
+        M = pval.shape[0]
+        pnull = (0.5 + sp.arange(M))/M
+        # pnull = np.sort(np.random.uniform(size = tests))
+                
+        pval[pval<minpval]=minpval
+        pval[pval>=1]=1
+
+        if distr == 'chi2':
+            qnull = st.chi2.isf(pnull, 1)
+            qemp = (st.chi2.isf(sp.sort(pval),1))
+            xl = 'LOD scores'
+            yl = '$\chi^2$ quantiles'
+
+        if distr == 'log10':
+            qnull = -sp.log10(pnull)            
+            qemp = -sp.log10(sp.sort(pval)) #sorts the object, returns nothing
+            xl = '-log10(P) observed'
+            yl = '-log10(P) expected'
+        if not (sp.isreal(qemp)).all(): raise Exception("imaginary qemp found")
+        if qnull.max>maxval:
+            maxval = qnull.max()                
+        pl.plot(qnull, qemp, '.', markersize=markersize)
+        #pl.plot([0,qemp.max()], [0,qemp.max()],'r')        
+        if addlambda:
+            lambda_gc = estimate_lambda(pval)
+            print "lambda=%1.4f" % lambda_gc
+            #pl.legend(["gc="+ '%1.3f' % lambda_gc],loc=2)   
+            # if there's only one method, just print the lambda
+            if len(pvallist) == 1:
+                legendlist=["$\lambda_{GC}=$%1.4f" % lambda_gc]   
+            # otherwise add it at the end of the name
+            else:
+                legendlist[i] = legendlist[i] + " ($\lambda_{GC}=$%1.4f)" % lambda_gc
+
+    addqqplotinfo(qnull,M,xl,yl,xlim,ylim,alphalevel,legendlist,fixaxes)  
+    
+    if title is not None:
+        pl.title(title)            
+    
+    if fileout is not None:
+        pl.savefig(fileout)
+
+    return h1,qnull, qemp,
+
+
+def qqplotp(pv,fileout = None, alphalevel = 0.05,legend=None,xlim=None,ylim=None,ycoord=10,plotsize="652x526",title=None,dohist=True, numbins=50, figsize=[5,5], markersize=2):
+     '''
+     Read in p-values from filein and make a qqplot adn histogram.
+     If fileout is provided, saves the qqplot only at present.
+     Searches through p until one is found.   '''       
+     
+     import pylab as pl     
+     pl.ion()     
+     
+     fs=8     
+     h1=qqplot(pv, fileout, alphalevel,legend,xlim,ylim,addlambda=True, figsize=figsize, markersize=markersize)
+     #lambda_gc=estimate_lambda(pv)
+     #pl.legend(["gc="+ '%1.3f' % lambda_gc],loc=2)     
+     pl.title(title,fontsize=fs)
+     
+     wm=pl.get_current_fig_manager()
+     #e.g. "652x526+100+10
+     xcoord=100     
+     #wm.window.wm_geometry(plotsize + "+" + str(xcoord) + "+" + str(ycoord))
+
+     if dohist:
+         h2=pvalhist(pv, numbins=numbins, figsize=figsize)
+         pl.title(title,fontsize=fs)
+         #wm=pl.get_current_fig_manager()
+         width_height=plotsize.split("x")
+         buffer=10
+         xcoord=int(xcoord + float(width_height[0])+buffer)
+         #wm.window.wm_geometry(plotsize + "+" + str(xcoord) + "+" + str(ycoord))
+     else: h2=None
+
+     return h1,h2
+
+def addqqplotinfo(qnull,M,xl='-log10(P) observed',yl='-log10(P) expected',xlim=None,ylim=None,alphalevel=0.05,legendlist=None,fixaxes=False):    
+    distr='log10'
+    pl.plot([0,qnull.max()], [0,qnull.max()],'k')
+    pl.ylabel(xl)
+    pl.xlabel(yl)
+    if xlim is not None:
+        pl.xlim(xlim)
+    if ylim is not None:
+        pl.ylim(ylim)        
+    if alphalevel is not None:
+        if distr == 'log10':
+            betaUp, betaDown, theoreticalPvals = _qqplot_bar(M=M,alphalevel=alphalevel,distr=distr)
+            lower = -sp.log10(theoreticalPvals-betaDown)
+            upper = -sp.log10(theoreticalPvals+betaUp)
+            pl.fill_between(-sp.log10(theoreticalPvals),lower,upper,color="grey",alpha=0.5)
+            #pl.plot(-sp.log10(theoreticalPvals),lower,'g-.')
+            #pl.plot(-sp.log10(theoreticalPvals),upper,'g-.')
+    if legendlist is not None:
+        leg = pl.legend(legendlist, loc=4, numpoints=1)
+        # set the markersize for the legend
+        for lo in leg.legendHandles:
+            lo.set_markersize(10)
+
+    if fixaxes:
+        fix_axes()        
+
+def _qqplot_bar(M=1000000, alphalevel = 0.05,distr = 'log10'):
+    '''
+    calculate error bars for a QQ-plot
+    --------------------------------------------------------------------
+    Input:
+    -------------   ----------------------------------------------------
+    M               number of points to compute error bars
+    alphalevel      significance level for the error bars (default 0.05)
+    distr           space in which the error bars are implemented
+                    Note only log10 is implemented (default 'log10')
+    --------------------------------------------------------------------
+    Returns:
+    -------------   ----------------------------------------------------
+    betaUp          upper error bars
+    betaDown        lower error bars
+    theoreticalPvals    theoretical P-values under uniform
+    --------------------------------------------------------------------
+    '''
+
+
+    #assumes 'log10'
+
+    mRange=10**(sp.arange(sp.log10(0.5),sp.log10(M-0.5)+0.1,0.1));#should be exp or 10**?
+    numPts=len(mRange);
+    betaalphaLevel=sp.zeros(numPts);#down in the plot
+    betaOneMinusalphaLevel=sp.zeros(numPts);#up in the plot
+    betaInvHalf=sp.zeros(numPts);
+    for n in xrange(numPts):
+        m=mRange[n]; #numplessThanThresh=m;
+        betaInvHalf[n]=st.beta.ppf(0.5,m,M-m);
+        betaalphaLevel[n]=st.beta.ppf(alphalevel,m,M-m);
+        betaOneMinusalphaLevel[n]=st.beta.ppf(1-alphalevel,m,M-m);
+        pass
+    betaDown=betaInvHalf-betaalphaLevel;
+    betaUp=betaOneMinusalphaLevel-betaInvHalf;
+
+    theoreticalPvals=mRange/M;
+    return betaUp, betaDown, theoreticalPvals
+
+
+
+def fix_axes(buffer=0.1):
+    '''
+    Makes x and y max the same, and the lower limits 0.
+    '''    
+    maxlim=max(pl.xlim()[1],pl.ylim()[1])    
+    pl.xlim([0-buffer,maxlim+buffer])
+    pl.ylim([0-buffer,maxlim+buffer])
+
+def estimate_lambda(pv):
+    '''
+    estimate the lambda for a given array of P-values
+    ------------------------------------------------------------------
+    pv          numpy array containing the P-values
+    ------------------------------------------------------------------
+    L           lambda value
+    ------------------------------------------------------------------
+    '''
+    LOD2 = sp.median(st.chi2.isf(pv, 1))
+    L = (LOD2/0.456)
+    return L
+
+     
+def pvalhist(pv,numbins=50,linewidth=3.0,linespec='--r', figsize=[5,5]):    
+    '''
+    Plots normalized histogram, plus theoretical null-only line.
+    '''    
+    h2=pl.figure(figsize=figsize)      
+    [nn,bins,patches]=pl.hist(pv,numbins,normed=True)    
+    pl.plot([0, 1],[1,1],linespec,linewidth=linewidth)
+
+
 
 def get_pval_from_predictions(m0_predictions, m1_predictions, ground_truth, twotailed=False, method='steiger'):
     '''

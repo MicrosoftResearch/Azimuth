@@ -13,6 +13,7 @@ Learning to Rank for Information Retrieval (Tie-Yan Liu)
 import numpy as np
 import scipy as sp
 import scipy.stats
+import util as ut
 
 
 def mean_reciprocal_rank(rs):
@@ -273,7 +274,7 @@ def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=Fa
 
     # this is the one with ties:
     dcg = dcg_at_k_ties(labels, predictions, k, method=method, theta=theta)
-
+    
     # this one is the vanilla computation that ignores ties (and should match dcg_at_k_ties when no ties are present):
     # highest-to-lowest of the true labels (i.e. best first)
     # dcg_max = dcg_at_k(sorted(labels, reverse=True), k, method)
@@ -284,7 +285,10 @@ def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=Fa
         ndcg = dcg / dcg_max
     else:
         dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta=theta)
-        ndcg = (dcg - dcg_min) / (dcg_max - dcg_min)
+        numerator = (dcg - dcg_min)
+        assert numerator > -1e-5
+        numerator = np.max((0, numerator))
+        ndcg = numerator / (dcg_max - dcg_min)
             
         assert ndcg <= 1.0 and ndcg >= 0.0, "ndcg=%f should be in [0,1]" % ndcg
 
@@ -409,175 +413,124 @@ def ndcg_bootstrap_test(preds1, preds2, true_labels, num_bootstrap, method, k, n
 
     return pv
 
-def swap_perm_test_ndcg(preds1, preds2, true_labels, num_perm, method, k, normalize_from_below_too, seed = "78923"):
+def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, normalize_from_below_too, theta=None, seed = "78923"):
             
         # pVal is the probability that we would observe as big an AUC diff as we
         # did if the ROC curves were drawn from the null hypothesis (which is that 
         # one model does not perform better than the other)
         #
-        # think of it this way: we want a null distribution which says that there
-        # is no difference between the ROCs. Since an AUC difference
-        # cannot arise from any entries in the ordered lists that match up, we can
-        # ignore these (though we could include them as well, but it would fall out
-        # in the wash). So instead, we assume (know) that all the information in the 
-        # differences in AUCs is contained in the mismatched pairs, and we want to
-        # destroy this info for the null, so we swap the values between the two
-        # models. However, we want to keep the number of positive/negative samples
-        # the same, so when we swap one pair, we must also swap another in the
-        # other direction.            
-        #
-        # Adapted from an AUC test which one can show matches the analytical version
-        # when there are no ties.
+        # null hypothesis is that the prediction ranking are the same, so we exchange a random 
+        # number of them with each other. 
         #
         # see ndcg_at_k_ties for all but the first four parameters
         #
         # this is a two-sided test, but since it is a symmetric null distribution, one should
         # be able to divide the p-value by 2 to get the one-sided version (but think this through before using)
         
+        if isinstance(preds1, list):
+            preds1 = np.array(preds1)
+        else:
+            preds1 = preds1.flatten()
+
+        if isinstance(preds2, list):
+            preds2 = np.array(preds2)
+        else:
+            preds2 = preds2.flatten()
+
+        if isinstance(true_labels, list):
+            true_labels = np.array(true_labels)
+        else:
+            true_labels = true_labels.flatten()
+
+        assert len(preds1) == len(preds2), "need same number of preditions from each model"
+        assert len(preds1) == len(true_labels), "need same number of preditions in truth and predictions"
+        N = len(preds1)
+
+        # re-sort all by truth ordering so that when swap they are aligned
+        sorted_ind = np.argsort(true_labels)[::-1]
+        true_labels = true_labels[sorted_ind]
+        preds1 = preds1[sorted_ind]
+        preds2 = preds2[sorted_ind]
+
         ranks1 = sp.stats.mstats.rankdata(preds1)
         ranks2 = sp.stats.mstats.rankdata(preds2)
 
-        ndcg1 = ndcg_at_k_ties(true_labels, ranks1, k=k, method=method, normalize_from_below_too=normalize_from_below_too)
-        ndcg2 = ndcg_at_k_ties(true_labels, ranks2, k=k, method=method, normalize_from_below_too=normalize_from_below_too)
+        ndcg1 = ndcg_at_k_ties(true_labels, ranks1, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
+        ndcg2 = ndcg_at_k_ties(true_labels, ranks2, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
 
         real_ndcg_diff = np.abs(ndcg1 - ndcg2)
+                
+        perm_ndcg_diff = np.nan*np.zeros(nperm)
+        if False:#np.all(preds1 == preds2):
+            pval = 1.0            
+        else:                    
+            for t in range(nperm):
+                pair_ind_to_swap = np.random.rand(N) < 0.5
 
-        perm_ndcg = np.nan*np.zeros(num_perm)
-        
-        sorted_ind = np.argsort(predictions)[::-1]
-        predictions = predictions[sorted_ind]
-               
-       
-            #if (orderedTargets1.Length == 0) throw new Exception("empty ROCs given as input");
+                ranks1_perm = ranks1.copy();
+                ranks1_perm[pair_ind_to_swap] = ranks2[pair_ind_to_swap]
 
-            #DoubleArray targetDiff = orderedTargets1 - orderedTargets2;
-            #IntArray posDiffInd = targetDiff.Find(v => v > 0);
-            #IntArray negDiffInd = targetDiff.Find(v => v < 0);
+                ranks2_perm = ranks2.copy();
+                ranks2_perm[pair_ind_to_swap] = ranks1[pair_ind_to_swap]
 
-            #int numPos = posDiffInd.Length;
-            #int numNeg = negDiffInd.Length;
-            #//Helper.CheckCondition(Math.Abs(numPos - numNeg) <= 1, "don't think this should happen when non-truncated ROCs are used");
+                ndcg1_perm = ndcg_at_k_ties(true_labels, ranks1_perm, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
+                ndcg2_perm = ndcg_at_k_ties(true_labels, ranks2_perm, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
 
-            #double pVal;
-            #if (numPos == 0 || numNeg == 0)
-            #{//ROCs are identical
-            #    pVal = 1;
-            #    return pVal;
-            #}
+                tmp_diff = np.abs(ndcg1_perm - ndcg2_perm)
+                perm_ndcg_diff[t] = tmp_diff
+                
+            num_stat_greater = np.max((((perm_ndcg_diff > real_ndcg_diff).sum() + 1), 1.0))
+            pval = num_stat_greater / nperm
 
-            #//bug checking:
-            #int numPos1 = roc1._classLabels.ElementEQ(POS_LABEL).Sum();
-            #int numNeg1 = roc1._classLabels.ElementEQ(NEG_LABEL).Sum();
-            #int numPos2 = roc2._classLabels.ElementEQ(POS_LABEL).Sum();
-            #int numNeg2 = roc2._classLabels.ElementEQ(NEG_LABEL).Sum();
-
-            #//these won't be true if we're using a truncated ROC test
-            #//Helper.CheckCondition(numPos1 == numPos2, "rocs must correspond to the same labelled data (i.e, # of 1/0 must be the same)");
-            #//Helper.CheckCondition(numNeg1 == numNeg2, "rocs must correspond to the same labelled data (i.e, # of 1/0 must be the same)");
-
-            #//for bug checking, keep track of avg number of swaps:
-            #//DoubleArray numPairedSwaps = new DoubleArray(1, numTrial);
-            #//DoubleArray auc1tmp= new DoubleArray(1, numTrial);
-            #//DoubleArray auc2tmp = new DoubleArray(1, numTrial);
-
-            #int numPairs = Math.Min(numPos, numNeg);
-
-            #//for (int t = 0; t < numTrial; t++)
-            #Parallel.For(0, numTrial, parallelOptions, t =>
-            #{
-            #    //Helper.CheckCondition((orderedTargets1 - orderedTargets2).Abs().Sum() != 0);
-
-            #    Random myRand = SpecialFunctions.GetMachineInvariantRandomFromSeedAndNullIndex(randomStringSeed, t + 1);
-
-            #    //randomly pair up each positive mismatch with each negative mismatch
-            #    IntArray posIndRand = posDiffInd.RandomPermutation(myRand);
-            #    IntArray negIndRand = negDiffInd.RandomPermutation(myRand);
-
-            #    //throw new NotImplementedException("Change to GetSlice()");
-            #    IntArray possiblePosPairs = posIndRand.GetColSlice(0, 1, numPairs - 1);//ColSlice(0, 1, numPairs - 1);
-            #    IntArray possibleNegPairs = negIndRand.GetColSlice(0, 1, numPairs - 1); //ColSlice(0, 1, numPairs - 1);
-            #    IntArray possiblePairs = ShoUtils.CatArrayCol(possiblePosPairs, possibleNegPairs).T;
-            #    //Helper.CheckCondition(possiblePairs.size1 == numPairs, "something went wrong");
-
-            #    //randomly pick each pair with prob=0.5 to include in the swap:
-            #    DoubleArray randVec = (new DoubleArray(1, numPairs)).FillRandUseSeed(myRand);
-
-            #    IntArray pairsOfPairsToBothSwapInd = randVec.Find(v => v >= 0.5);
-            #    List<int> listInd = pairsOfPairsToBothSwapInd.T.ToListOrEmpty();
-            #    //numPairedSwaps[t] = listInd.Count;
-
-            #    DoubleArray newTarg1 = DoubleArray.From(orderedTargets1);
-            #    DoubleArray newTarg2 = DoubleArray.From(orderedTargets2);
-
-            #    if (listInd.Count > 0)
-            #    {
-            #        //throw new NotImplementedException("Change to GetSlice()");
-            #        List<int> swapThesePairs = possiblePairs.GetRows(pairsOfPairsToBothSwapInd.T.ToList()).ToVector().ToList();
-
-            #        //swap the chosen pairs with a 1-x
-            #        //Helper.CheckCondition((newTarg1.GetColsE(swapThesePairs) - newTarg2.GetColsE(swapThesePairs)).Abs().Sum() == swapThesePairs.Count); 
-
-            #        //throw new NotImplementedException("Change to SetSlice()");
-            #        newTarg1.SetCols(swapThesePairs, 1 - newTarg1.GetCols(swapThesePairs));//.GetColsE(swapThesePairs));
-            #        newTarg2.SetCols(swapThesePairs, 1 - newTarg2.GetCols(swapThesePairs));//GetColsE(swapThesePairs));
-
-            #        //newTarg1.WriteToCSVNoDate("newTarg1Swapped");
-            #        //newTarg2.WriteToCSVNoDate("newTarg2Swapped");
-
-            #        //Helper.CheckCondition(newTarg1.Sum() == orderedTargets1.Sum());
-            #        //Helper.CheckCondition((newTarg1 - newTarg2).Abs().Sum() == numPos + numNeg);
-            #        //Helper.CheckCondition((newTarg1 - newTarg2).Find(v => v != 0).Length == numPos + numNeg);
-            #        //Helper.CheckCondition((newTarg1 - orderedTargets1).Abs().Sum() == swapThesePairs.Count);
-            #        //Helper.CheckCondition((newTarg2 - orderedTargets2).Abs().Sum() == swapThesePairs.Count);
-            #        //Helper.CheckCondition((orderedTargets1 - orderedTargets2).Abs().Sum() != 0);
-            #    }
-
-            #    double AUC1, AUC2;
-
-            #    if (maxFPR == 1)
-            #    {
-            #        //do it the cheap way
-            #        AUC1 = ComputeAUCfromOrderedList(newTarg1);
-            #        AUC2 = ComputeAUCfromOrderedList(newTarg2);
-            #    }
-            #    else
-            #    {
-            #        //do it with manual integration, the more expensive way
-            #        AUC1 = new ROC(newTarg1, roc1._classProbs, roc1._lowerScoreIsMoreLikelyClass1, maxFPR, true)._AucAtMaxFpr;
-            #        AUC2 = new ROC(newTarg2, roc2._classProbs, roc2._lowerScoreIsMoreLikelyClass1, maxFPR, true)._AucAtMaxFpr;
-            #    }
-
-            #    //auc1tmp[t] = AUC1;
-            #    //auc2tmp[t] = AUC2;
-
-            #    //permDiffs[t] = Math.Abs(AUC1 - AUC2);
-            #    permDiffs[t] = (AUC1 - AUC2);
-
-            #}
-            #);
-
-            #//double markerSize = 0.1;
-            #//ShoUtils.MakePlotAndView(permDiffs, "permDiffs", false, markerSize, ".");
-            #//ShoUtils.MakePlotAndView(numPairedSwaps, "numPairedSwaps", false, markerSize, "*");
-            #permDiffs = permDiffs.Map(v => Math.Abs(v));
-            #//debugging:
-            #//permDiffs.WriteToCSVNoDate("permDiffs");
-            #//numPairedSwaps.WriteToCSVNoDate("numPairedSwapsC#");
-
-
-            #double pseudoCount = 1;
-            #pVal = (pseudoCount + (double)(permDiffs >= realAUCdiff).Sum()) / (double)numTrial;
-            #pVal = Math.Min(pVal, 1);
-
-            #//ShoUtils.MakePlotAndView((auc1tmp-auc2tmp).Map(v=>Math.Abs(v)), "auc1-auc2", false, 0.2, ".");
-
-            #//System.Console.WriteLine("Avg # swaps: " + numPairedSwaps.Mean() + " ( of " + numPairs + " total), numGreaterSwaps=" + (double)(permDiffs >= realAUCdiff).Sum() + ", p=" + pVal + ", realAUCdiff=" + String.Format("{0:0.00000}", realAUCdiff));
-
-
-            #return pVal;
+        if False:
+            plt.figure();
+            plt.plot(np.sort(perm_ndcg_diff), '.')
+            plt.plot(real_ndcg_diff*np.ones(perm_ndcg_diff.shape), 'k-')
+            plt.show()
+                        
+        return pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    
+    T = 100
+    N = 100
+    allp = np.nan*np.ones(T)
+
+    frac_zeros = 0.9
+
+    nperm = 100
+    method = 4; theta = 0.5; normalize_from_below_too = True    
+    k = None
+        
+    for t in range(T):
+
+        truth = np.random.rand(N)
+        zero_ind = np.random.rand(N) < frac_zeros
+        truth[zero_ind] = 0
+
+        pred1 = np.random.rand(N)
+        zero_ind = np.random.rand(N) < frac_zeros
+        pred1[zero_ind] = 0
+
+        pred2 = np.random.rand(N)
+        zero_ind = np.random.rand(N) < frac_zeros
+        pred2[zero_ind] = 0
+        
+        pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred2, truth, nperm, method, k, normalize_from_below_too, theta=theta, seed = "78923")
+        print "%d) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f" % (t, ndcg1, ndcg2, real_ndcg_diff, pval)
+        allp[t] = pval
+        
+    mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d" % (T, nperm, N)
+    ut.qqplotp(allp, dohist=True, numbins=10, figsize=[7,7], title=mytitle, markersize=5)
+    plt.show()
+    
+
+
+    import ipdb; ipdb.set_trace()
+
+
     # # e.g. where all predictions are the same
     # labels = np.arange(30)
     # predictions = np.ones(30)
@@ -606,16 +559,34 @@ if __name__ == "__main__":
     truth3 = np.array([3, 4, 2, 1, 0, 0, 0])
     truth4 = np.zeros(7); truth4[0] = 1
     pred3 = np.array([2, 1, 3, 4, 5, 6, 7])*10
+    pred4 = np.array([4, 3, 2, 1, 0, 0, 0])
+    pred5 = np.array([4, 3, 1, 2, 0, 0, 0])
+
+    nperm = 1000
+    method = 4; theta = 0.5; normalize_from_below_too = True
     k = len(pred3)
+
+    pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred2, truth, nperm, method, k, normalize_from_below_too, theta=theta, seed = "78923")
+    print "ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f" % (ndcg1, ndcg2, real_ndcg_diff, pval)
+    
+    pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred1, truth, nperm, method, k, normalize_from_below_too, theta=theta, seed = "78923")    
+    print "ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f" % (ndcg1, ndcg2, real_ndcg_diff, pval)
+
+    pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred4, truth, nperm, method, k, normalize_from_below_too, theta=theta, seed = "78923")    
+    print "ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f" % (ndcg1, ndcg2, real_ndcg_diff, pval)
+
+    pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred5, truth, nperm, method, k, normalize_from_below_too, theta=theta, seed = "78923")    
+    print "ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f" % (ndcg1, ndcg2, real_ndcg_diff, pval)
+
+    import ipdb; ipdb.set_trace()
+
 
     #print ndcg_at_k_ties(truth, truth, k, method=0, normalize_from_below_too=True)
     #print ndcg_at_k_ties(truth, pred2, k, method=0, normalize_from_below_too=True)
     #print ndcg_at_k_ties(truth, pred3, k, method=0, normalize_from_below_too=True)
     #print ndcg_at_k_ties(truth3, pred3, k, method=3, normalize_from_below_too=True)
     print ndcg_at_k_ties(truth4, pred2, k, method=3, normalize_from_below_too=True)
-
-    import ipdb; ipdb.set_trace()
-
+        
     print ndcg_alt(truth[np.argsort(pred2)[::-1]], 5)
     print ndcg_at_k(truth[np.argsort(pred2)[::-1]], 5, method=1)
     print ndcg_at_k(truth[np.argsort(pred2)[::-1]], 5, method=0)
