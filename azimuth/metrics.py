@@ -499,8 +499,8 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     
-    T = 1000
-    N = 1000
+    T = 100
+    N = 100
     allp = np.nan*np.ones(T)
 
     frac_zeros = 0.9
