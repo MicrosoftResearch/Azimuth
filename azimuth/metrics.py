@@ -237,7 +237,7 @@ def ndcg_at_k(r, k, method=0):
 ## ------------------------------------------------------------------------------------
 ## custom stuff from us to avoid problem with ties
 
-def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=False, theta_range=None):
+def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=False, theta=None):
     '''
     See 2008 McSherry et al on how to efficiently compute NDCG with ties
     labels are ground truth
@@ -255,11 +255,6 @@ def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=Fa
     if isinstance(predictions, list):
         predictions = np.array(predictions)
 
-    if np.isscalar(theta_range): theta_range = [theta_range]
-    if theta_range is not None:
-        use_theta_range = True
-    else:
-        use_theta_range = False
             
     assert len(labels.shape)==1 or np.min(labels.shape)==1, "should be 1D array or equivalent"
     assert len(predictions.shape)==1 or np.min(predictions.shape)==1, "should be 1D array or equivalent"
@@ -274,44 +269,23 @@ def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=Fa
 
     labels = labels.copy()
 
-    # NDCG requires the ground truth labels to be > 0 (the predictions can be negative)
-    # if np.any(labels < 0):
-    #     labels += np.abs(labels.min() + 1e-5)
-
-    # this is the one with ties:
-    dcg = dcg_at_k_ties(labels, predictions, k, method=method, theta_range=theta_range)
-    
-    # this one is the vanilla computation that ignores ties (and should match dcg_at_k_ties when no ties are present):
-    # highest-to-lowest of the true labels (i.e. best first)
-    # dcg_max = dcg_at_k(sorted(labels, reverse=True), k, method)
-    dcg_max = dcg_at_k_ties(labels, labels, k, method, theta_range=theta_range)
+    dcg = dcg_at_k_ties(labels, predictions, k, method=method, theta=theta)
+        
+    dcg_max = dcg_at_k_ties(labels, labels, k, method, theta=theta)
     # NOTE: I have checked that dcg_at_k_ties and dcg_at_k match when there are no ties, or ties in the labels
 
-    if not use_theta_range:
-        if normalize_from_below_too:
-            dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta_range=theta_range)
-        else:
-            dcg_min = 0
-        numerator = (dcg - dcg_min)
-        assert numerator > -1e-5
-        numerator = np.max((0, numerator))
-        ndcg = numerator / (dcg_max - dcg_min)            
-        assert ndcg <= 1.0 and ndcg >= 0.0, "ndcg=%f should be in [0,1]" % ndcg
-        if not dcg_max: ndcg = 0.
+    
+    if normalize_from_below_too:
+        dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta=theta)
     else:
-        ndcg = {}
-
-        for theta in theta_range:
-            if normalize_from_below_too:
-                dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta_range=theta)
-            else:
-                dcg_min = 0
-            numerator = (dcg[theta] - dcg_min)
-            assert numerator > -1e-5
-            numerator = np.max((0, numerator))
-            ndcg[theta] = numerator / (dcg_max - dcg_min)            
-            assert ndcg[theta] <= 1.0 and ndcg[theta] >= 0.0, "ndcg=%f should be in [0,1]" % ndcg
-            if not dcg_max[theta]: ndcg = 0.       
+        dcg_min = 0
+    numerator = (dcg - dcg_min)
+    assert numerator > -1e-5
+    numerator = np.max((0, numerator))
+    ndcg = numerator / (dcg_max - dcg_min)            
+    assert ndcg <= 1.0 and ndcg >= 0.0, "ndcg=%f should be in [0,1]" % ndcg
+    if not dcg_max: 
+        ndcg = 0.
     return ndcg
 
 def dcg_helper(discount_factors, gain, k, labels, method, predictions):
@@ -338,7 +312,7 @@ def dcg_helper(discount_factors, gain, k, labels, method, predictions):
         assert not np.isnan(dcg), "found nan dcg"
     return dcg
 
-def dcg_at_k_ties(labels, predictions, k, method=0, theta_range=None):
+def dcg_at_k_ties(labels, predictions, k, method=0, theta=None):
     '''
     See 2008 McSherry et al on how to efficiently compute NDCG (method=0 here) with ties (in the predictions)
     'labels' are what the "ground truth" judges assign
@@ -348,12 +322,6 @@ def dcg_at_k_ties(labels, predictions, k, method=0, theta_range=None):
     assert isinstance(predictions,np.ndarray)
     assert len(labels) == len(predictions), "labels and predictions should be of same length"
     assert k <= len(labels), "k should be <= len(labels)"
-
-    if np.isscalar(theta_range): theta_range = [theta_range]
-    if theta_range is not None:
-        use_theta_range = True
-    else:
-        use_theta_range = False
 
     # order both labels and preds so that they are in order of decreasing predictive score
     sorted_ind = np.argsort(predictions)[::-1]
@@ -379,27 +347,16 @@ def dcg_at_k_ties(labels, predictions, k, method=0, theta_range=None):
     elif method==3:
         discount_factors = get_discount_factors(len(labels), discount='combination')
     elif method==4:
-        assert theta_range is not None, "need to specify theta or theta_range"
-        if use_theta_range:
-            discount_factors = {}
-            for theta in theta_range:
-                discount_factors[theta] = get_discount_factors(len(labels), discount='1/rtheta', theta=theta)
-        else:
-            discount_factors = get_discount_factors(len(labels), discount='1/rtheta', theta=theta_range[0])
+        assert theta is not None, "need to specify theta or theta"
+        discount_factors = get_discount_factors(len(labels), discount='1/rtheta', theta=theta)
 
     else:
         raise NotImplementedError()
 
-    assert len(discount_factors[theta_range[0]]) == len(labels), "discount factors has wrong length"
+    assert len(discount_factors) == len(labels), "discount factors has wrong length"
 
-    if use_theta_range:
-        dcg = {}
-        for theta in theta_range:
-            dcg[theta] = dcg_helper(discount_factors[theta], gain, k, labels, method, predictions)
-            assert not np.isnan(dcg[theta]), "found nan dcg"
-    else:
-        dcg = dcg_helper(discount_factors, gain, k, labels, method, predictions)
-        assert not np.isnan(dcg), "found nan dcg"
+    dcg = dcg_helper(discount_factors, gain, k, labels, method, predictions)
+    assert not np.isnan(dcg), "found nan dcg"
     
     return dcg
 
@@ -453,7 +410,7 @@ def ndcg_bootstrap_test(preds1, preds2, true_labels, num_bootstrap, method, k, n
 
     return pv
 
-def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, normalize_from_below_too, theta_range=None, balance_zeros=True):
+def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, normalize_from_below_too, theta=None, balance_zeros=True):
             
         # pVal is the probability that we would observe as big an AUC diff as we
         # did if the ROC curves were drawn from the null hypothesis (which is that 
@@ -497,14 +454,14 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
         ranks1 = sp.stats.mstats.rankdata(preds1)
         ranks2 = sp.stats.mstats.rankdata(preds2)
         
-        ndcg1 = ndcg_at_k_ties(true_labels, ranks1, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta_range=theta_range)
-        ndcg2 = ndcg_at_k_ties(true_labels, ranks2, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta_range=theta_range)
+        ndcg1 = ndcg_at_k_ties(true_labels, ranks1, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
+        ndcg2 = ndcg_at_k_ties(true_labels, ranks2, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
 
         real_ndcg_diff = {}
         perm_ndcg_diff = {}
-        for theta in theta_range:
-            real_ndcg_diff[theta] = np.abs(ndcg1[theta] - ndcg2[theta])                
-            perm_ndcg_diff[theta] = np.nan*np.zeros(nperm)
+
+        real_ndcg_diff = np.abs(ndcg1 - ndcg2)                
+        perm_ndcg_diff = np.nan*np.zeros(nperm)
             
         if False:#np.all(preds1 == preds2):
             pval[theta] = 1.0            
@@ -521,39 +478,23 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
                 ranks2_perm = ranks2.copy();
                 ranks2_perm[pair_ind_to_swap] = ranks1[pair_ind_to_swap]
 
-                ndcg1_perm = ndcg_at_k_ties(true_labels, ranks1_perm, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta_range=theta_range)
-                ndcg2_perm = ndcg_at_k_ties(true_labels, ranks2_perm, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta_range=theta_range)
+                ndcg1_perm = ndcg_at_k_ties(true_labels, ranks1_perm, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
+                ndcg2_perm = ndcg_at_k_ties(true_labels, ranks2_perm, k=k, method=method, normalize_from_below_too=normalize_from_below_too, theta=theta)
 
-                for theta in theta_range:
+                for theta in theta:
                     tmp_diff = np.abs(ndcg1_perm[theta] - ndcg2_perm[theta])
                     perm_ndcg_diff[theta][t] = tmp_diff
 
             pval = {}            
-            for theta in theta_range:    
-                num_stat_greater = np.max((((perm_ndcg_diff[theta] > real_ndcg_diff[theta]).sum() + 1), 1.0))
-                pval[theta] = num_stat_greater / nperm
+            
+            num_stat_greater = np.max((((perm_ndcg_diff > real_ndcg_diff).sum() + 1), 1.0))
+            pval = num_stat_greater / nperm
 
         if False:
-            for theta in theta_range:
-                plt.figure();
-                plt.plot(np.sort(perm_ndcg_diff), '.')
-                plt.plot(real_ndcg_diff*np.ones(perm_ndcg_diff.shape), 'k-')
-                plt.show()
-
-        # Also compute p-value and distribution for a test-statistic which is the sum in ndcg_diff over the entire theta_range 
-        ndcg1["all"] = 0
-        ndcg2["all"] = 0
-        real_ndcg_diff["all"] = 0
-        perm_ndcg_diff["all"] = np.nan*np.zeros(nperm)
-        for theta in theta_range: 
-            ndcg1["all"] += ndcg1[theta]
-            ndcg2["all"] += ndcg2[theta]
-            real_ndcg_diff["all"] += real_ndcg_diff[theta]
-            perm_ndcg_diff["all"] = perm_ndcg_diff["all"] + perm_ndcg_diff[theta]
-        real_ndcg_diff["all"] = real_ndcg_diff["all"]/len(theta_range)
-        perm_ndcg_diff["all"] = perm_ndcg_diff["all"]/len(theta_range)
-        num_stat_greater = np.max((((perm_ndcg_diff["all"] > real_ndcg_diff["all"]).sum() + 1), 1.0))
-        pval["all"] = num_stat_greater / nperm
+            plt.figure();
+            plt.plot(np.sort(perm_ndcg_diff), '.')
+            plt.plot(real_ndcg_diff*np.ones(perm_ndcg_diff.shape), 'k-')
+            plt.show()
                         
         return pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2
 
@@ -585,7 +526,7 @@ if __name__ == "__main__":
         print "loading up saved data..." # two-fold CV data from CRISPR off-target GUIDE-SEQ
         with open(r'\\nerds5\kevin\from_nicolo\gs.pickle','rb') as f:  predictions, truth_all = pickle.load(f)
         print "done."
-        N = len(truth_all)
+        N = len(truth_all[0])
             
     for t in range(T):
 
