@@ -287,12 +287,11 @@ def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=Fa
     dcg_max = dcg_at_k_ties(labels, labels, k, method, theta_range=theta_range)
     # NOTE: I have checked that dcg_at_k_ties and dcg_at_k match when there are no ties, or ties in the labels
 
-    if normalize_from_below_too:
-        dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta_range=theta_range)
-    else:
-        dcg_min = 0
-
     if not use_theta_range:
+        if normalize_from_below_too:
+            dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta_range=theta_range)
+        else:
+            dcg_min = 0
         numerator = (dcg - dcg_min)
         assert numerator > -1e-5
         numerator = np.max((0, numerator))
@@ -301,11 +300,16 @@ def ndcg_at_k_ties(labels, predictions, k, method=0, normalize_from_below_too=Fa
         if not dcg_max: ndcg = 0.
     else:
         ndcg = {}
+
         for theta in theta_range:
-            numerator = (dcg[theta] - dcg_min[theta])
+            if normalize_from_below_too:
+                dcg_min = dcg_at_k_ties(np.sort(labels)[::-1], np.sort(predictions), k, method, theta_range=theta)
+            else:
+                dcg_min = 0
+            numerator = (dcg[theta] - dcg_min)
             assert numerator > -1e-5
             numerator = np.max((0, numerator))
-            ndcg[theta] = numerator / (dcg_max[theta] - dcg_min[theta])            
+            ndcg[theta] = numerator / (dcg_max - dcg_min)            
             assert ndcg[theta] <= 1.0 and ndcg[theta] >= 0.0, "ndcg=%f should be in [0,1]" % ndcg
             if not dcg_max[theta]: ndcg = 0.       
     return ndcg
@@ -566,8 +570,8 @@ if __name__ == "__main__":
 
     nperm = 100
     method = 4; normalize_from_below_too = True; 
-    #theta_range = [0.5, 0.6]; 
-    theta_range = thetas=np.logspace(np.log10(0.01), np.log10(1.0), 3)  # Nicolo uses 10, so I grab the extremes and middle
+    theta_range = np.logspace(np.log10(0.01), np.log10(1.0), 3)  # Nicolo uses 10, so I grab the extremes and middle
+    theta_range = np.array([0.01])
 
     # only for simulated data
     N = 100
@@ -581,6 +585,7 @@ if __name__ == "__main__":
         print "loading up saved data..." # two-fold CV data from CRISPR off-target GUIDE-SEQ
         with open(r'\\nerds5\kevin\from_nicolo\gs.pickle','rb') as f:  predictions, truth_all = pickle.load(f)
         print "done."
+        N = len(truth_all)
             
     for t in range(T):
 
@@ -614,6 +619,9 @@ if __name__ == "__main__":
         ut.qqplotp(allp[i,:], dohist=True, numbins=10, figsize=[6,6], title=mytitle, markersize=5)
         plt.show()
     
+    save_tmp_results = r'D:\Source\CRISPR\elevation\pickles\tmp.ndcg.stat.calibration.p'
+    #pickle.dump([theta_range, allp, pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2], open(save_tmp_results, "wb" ))
+    #[theta_range, allp, pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2] = pickle.load(open(save_tmp_results, "rb" ))
 
 
     import ipdb; ipdb.set_trace()
