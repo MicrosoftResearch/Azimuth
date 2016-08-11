@@ -110,7 +110,7 @@ def get_train_test(test_gene, y_all, train_genes=None):
         test = None
         raise Exception("not sure what this if clause is about, if triggered, look more closely")
         return train, test
-    
+
     not_test = (y_all.index.get_level_values('Target gene').values != test_gene)
 
     if train_genes is not None:
@@ -123,6 +123,8 @@ def get_train_test(test_gene, y_all, train_genes=None):
     #y_all['test'] as to do with extra pairs in V2
     if 'test' in y_all.columns.names:
         test = (y_all.index.get_level_values('Target gene').values== test_gene) * (y_all['test'].values == 1.)
+    elif test_gene == 'dummy':
+        test = train
     else:
          test = (y_all.index.get_level_values('Target gene').values== test_gene)
 
@@ -143,10 +145,10 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
     '''
 
     print "range of y_all is [%f, %f]" % (np.min(y_all[learn_options['target_name']].values), np.max(y_all[learn_options['target_name']].values))
-    
+
     allowed_methods = ["GPy", "linreg", "AdaBoostRegressor", "AdaBoostClassifier",
                        "DecisionTreeRegressor", "RandomForestRegressor",
-                       "ARDRegression", "GPy_fs", "mean", "random", "DNN", 
+                       "ARDRegression", "GPy_fs", "mean", "random", "DNN",
                        "lasso_ensemble", "doench", "logregL1", "sgrna_from_doench", 'SVC', 'xu_et_al']
 
     assert learn_options["method"] in allowed_methods,"invalid method: %s" % learn_options["method"]
@@ -163,10 +165,10 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
     # concatenate feature sets in to one nparray, and get dimension of each
     inputs, dim, dimsum, feature_names = util.concatenate_feature_sets(feature_sets)
     #import pickle; pickle.dump([y, inputs, feature_names, learn_options], open("saved_models/inputs.p", "wb" )); import ipdb; ipdb.set_trace()
-        
+
     if not CV:
         assert learn_options['cv'] == 'gene', 'Must use gene-CV when CV is False (I need to use all of the genes and stratified complicates that)'
-            
+
     # set-up for cross-validation
     ## for outer loop, the one Doench et al use genes for
     if learn_options["cv"] == "stratified":
@@ -179,7 +181,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
         elif learn_options['train_genes'] is not None and learn_options["test_genes"] is not None:
             n_folds = len(learn_options["test_genes"])
         else:
-            n_folds = len(learn_options['all_genes'])      
+            n_folds = len(learn_options['all_genes'])
 
         cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
         fold_labels = ["fold%d" % i for i in range(1,n_folds+1)]
@@ -193,7 +195,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
             #train_tmp, test_tmp = train_test_tmp
             # not a typo, using training set to test on as well, just for this case. Test set is not used
             # for internal cross-val, etc. anyway.
-            #train_test_tmp = (train_tmp, train_tmp)            
+            #train_test_tmp = (train_tmp, train_tmp)
             cv.append(train_test_tmp)
             fold_labels = ["dummy_for_no_cv"]#learn_options['all_genes']
 
@@ -210,7 +212,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
                 train_test_tmp = get_train_test(gene, y_all)
                 cv.append(train_test_tmp)
             fold_labels = learn_options['all_genes']
-            
+
         if learn_options['num_genes_remove_train'] is not None:
             for i, (train,test) in enumerate(cv):
                 unique_genes = np.random.permutation(np.unique(np.unique(y_all['Target gene'][train])))
@@ -273,7 +275,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
             elif learn_options["method"] == "mean":
                 job = pool.apply_async(azimuth.models.baselines.mean_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options))
             elif learn_options["method"] == "SVC":
-                job = pool.apply_async(azimuth.models.baselines.SVC_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options))                
+                job = pool.apply_async(azimuth.models.baselines.SVC_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options))
             elif learn_options["method"] == "DNN":
                 job = pool.apply_async(azimuth.models.DNN.DNN_on_fold, args=(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options))
             elif learn_options["method"] == "lasso_ensemble":
@@ -333,7 +335,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
             elif learn_options["method"] == "mean":
                  y_pred, m[i] = azimuth.models.baselines.mean_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
             elif learn_options["method"] == "SVC":
-                 y_pred, m[i] = azimuth.models.baselines.SVC_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)                 
+                 y_pred, m[i] = azimuth.models.baselines.SVC_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
             elif learn_options["method"] == "DNN":
                  y_pred, m[i] = azimuth.models.DNN.DNN_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
             elif learn_options["method"] == "lasso_ensemble":
@@ -343,7 +345,7 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
             elif learn_options["method"] == "sgrna_from_doench":
                  y_pred, m[i] = azimuth.models.baselines.sgrna_from_doench_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
             elif learn_options["method"] == "xu_et_al":
-                 y_pred, m[i] = azimuth.models.baselines.xu_et_al_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)                 
+                 y_pred, m[i] = azimuth.models.baselines.xu_et_al_on_fold(feature_sets, train, test, y, y_all, inputs, dim, dimsum, learn_options)
             else:
                 raise Exception("invalid method found: %s" % learn_options["method"])
 
@@ -369,4 +371,3 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
     t3 = time.time()
     print "\t\tElapsed time for cv is %.2f seconds" % (t3-t2)
     return metrics, gene_pred, fold_labels, m, dimsum, filename, feature_names
-
