@@ -502,18 +502,25 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
 if __name__ == "__main__":
     import cPickle as pickle
     import matplotlib.pyplot as plt
+    import elevation.metrics
+    import corrstats
 
-    simulated_data = False
+    simulated_data = True
     permute_real_data = True
         
-    T = 100
+    T = 10000
     allp = np.nan*np.ones(T)
 
     nperm = 100
-    method = 4; normalize_from_below_too = True; 
-    theta_range = np.logspace(np.log10(0.01), np.log10(1.0), 3)  # Nicolo uses 10, so I grab the extremes and middle
-    theta_range = np.array([0.01])
+    #method = 4; normalize_from_below_too = True; 
+    
+    #theta_range = np.logspace(np.log10(0.01), np.log10(1.0), 3)  # Nicolo uses 10, so I grab the extremes and middle
+    #theta_range = np.array([0.01])
+    weights = np.logspace(np.log10(0.0001), np.log10(10), 3); 
+    #weights = np.array([100.0])
+    theta_range = weights# just to make life easier
 
+    
     # only for simulated data
     N = 100
     frac_zeros = 0
@@ -546,21 +553,33 @@ if __name__ == "__main__":
             if permute_real_data:
                 truth = np.random.permutation(truth)
 
-        t0 = time.time()
-        pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred2, truth, nperm, method, k, normalize_from_below_too, theta_range=theta_range)
-        t1 = time.time()
-
-        for i, theta in enumerate(theta_range.tolist() + ["all"]):
-            print "%d, theta=%s) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f, elapsed time=%f minutes, smallest_p=%f" % (t, str(theta), ndcg1[theta], ndcg2[theta], real_ndcg_diff[theta], pval[theta], (t1-t0)/60, 1.0/nperm)        
-            allp[i, t] = pval[theta]
-        print "---------------"
+        t0 = time.time()        
+        #pval, real_ndcg_diff,  perm_ndcg_diff, ndcg1, ndcg2 = ndcg_at_k_swap_perm_test(pred1, pred2, truth, nperm, method, k, normalize_from_below_too, theta_range=theta_range)        
+        for i, w in enumerate(weights):
+            weights_array = truth.copy()
+            weights_array += w
+            corr0 = elevation.metrics.spearman_weighted(truth, pred1, w=weights_array)
+            corr1 = elevation.metrics.spearman_weighted(truth, pred2, w=weights_array)
+            corr01 = elevation.metrics.spearman_weighted(pred1, pred2, w=weights_array)
+            n0 = len(truth)
         
-    for i, theta in enumerate(theta_range.tolist() + ["all"]):
-        mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d, theta=%s" % (T, nperm, N, str(theta))
+            t2, pvaltmp = corrstats.dependent_corr(corr0, corr1, corr01, n0, twotailed=True, method="steiger")
+            allp[i, t] = pvaltmp
+            t1 = time.time()
+
+        #for i, theta in enumerate(theta_range.tolist() + ["all"]):
+        #    print "%d, theta=%s) ndcg1=%f, ndcg2=%f, ndcg_diff=%f, p=%f, elapsed time=%f minutes, smallest_p=%f" % (t, str(theta), ndcg1[theta], ndcg2[theta], real_ndcg_diff[theta], pval[theta], (t1-t0)/60, 1.0/nperm)        
+        #    allp[i, t] = pval[theta]
+        #print "---------------"
+        
+    #for i, theta in enumerate(theta_range.tolist() + ["all"]):
+    for i, theta in enumerate(theta_range.tolist()):
+        #mytitle = "Norm. hist p-values nDCG\n %d null samples, w %d perm and N=%d, theta=%s" % (T, nperm, N, str(theta))
+        mytitle = "Norm. hist p-values Steiger w weighted Spearman\n %d null samples, N=%d, weight=%s" % (T, N, str(theta))
         ut.qqplotp(allp[i,:], dohist=True, numbins=10, figsize=[6,6], title=mytitle, markersize=5)
         plt.show()
     
-    save_tmp_results = r'D:\Source\CRISPR\elevation\pickles\tmp.ndcg.stat.calibration.p'
+    #save_tmp_results = r'D:\Source\CRISPR\elevation\pickles\tmp.ndcg.stat.calibration.p'
     #pickle.dump([theta_range, allp, pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2], open(save_tmp_results, "wb" ))
     #[theta_range, allp, pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2] = pickle.load(open(save_tmp_results, "rb" ))
 
