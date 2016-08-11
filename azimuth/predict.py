@@ -125,6 +125,8 @@ def get_train_test(test_gene, y_all, train_genes=None):
         test = (y_all.index.get_level_values('Target gene').values== test_gene) * (y_all['test'].values == 1.)
     elif test_gene == 'dummy':
         test = train
+    elif test is None:
+         test = train
     else:
          test = (y_all.index.get_level_values('Target gene').values== test_gene)
 
