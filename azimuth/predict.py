@@ -104,12 +104,6 @@ def extract_spearman_for_fold(metrics, fold, i, predictions, truth, y_ground_tru
 def get_train_test(test_gene, y_all, train_genes=None):
     # this is a bit convoluted because the train_genes+test_genes may not add up to all genes
     # for e.g. when we load up V3, but then use only V2, etc.
-    is_off_target = 'MutatedSequence' in y_all.index.names
-    if is_off_target:
-        train = (y_all.index.get_level_values('MutatedSequence').values != test_gene)
-        test = None
-        raise Exception("not sure what this if clause is about, if triggered, look more closely")
-        return train, test
 
     not_test = (y_all.index.get_level_values('Target gene').values != test_gene)
 
