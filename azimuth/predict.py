@@ -108,6 +108,7 @@ def get_train_test(test_gene, y_all, train_genes=None):
     if is_off_target:
         train = (y_all.index.get_level_values('MutatedSequence').values != test_gene)
         test = None
+        raise Exception("not sure what this if clause is about, if triggered, look more closely")
         return train, test
     
     not_test = (y_all.index.get_level_values('Target gene').values != test_gene)
@@ -120,7 +121,10 @@ def get_train_test(test_gene, y_all, train_genes=None):
     else:
         train = not_test
     #y_all['test'] as to do with extra pairs in V2
-    test = (y_all.index.get_level_values('Target gene').values== test_gene) * (y_all['test'].values == 1.)
+    if 'test' in y_all.columns.names:
+        test = (y_all.index.get_level_values('Target gene').values== test_gene) * (y_all['test'].values == 1.)
+    else:
+         test = (y_all.index.get_level_values('Target gene').values== test_gene)
 
     # convert to indices
     test = np.where(test == True)[0]
@@ -186,10 +190,10 @@ def cross_validate(y_all, feature_sets, learn_options=None, TEST=False, train_ge
 
         if not CV:
             train_test_tmp = get_train_test('dummy', y_all) # get train, test split using a dummy gene
-            train_tmp, test_tmp = train_test_tmp
+            #train_tmp, test_tmp = train_test_tmp
             # not a typo, using training set to test on as well, just for this case. Test set is not used
             # for internal cross-val, etc. anyway.
-            train_test_tmp = (train_tmp, train_tmp)            
+            #train_test_tmp = (train_tmp, train_tmp)            
             cv.append(train_test_tmp)
             fold_labels = ["dummy_for_no_cv"]#learn_options['all_genes']
 
