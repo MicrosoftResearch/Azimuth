@@ -558,8 +558,12 @@ def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam
 
     feature_sets = feat.featurize_data(Xdf, learn_options, pandas.DataFrame(), gene_position, pam_audit=pam_audit, length_audit=length_audit)
     inputs, dim, dimsum, feature_names = azimuth.util.concatenate_feature_sets(feature_sets)
+    
+    #print "CRISPR"
+    #pandas.DataFrame(inputs).to_csv("CRISPR.inputs.test.csv")
+    #import ipdb; ipdb.set_trace()
 
-    # call to scikit-learn, returns a vector of predicted values
+    # call to scikit-learn, returns a vector of predicted values    
     preds = model.predict(inputs)
 
     # also check that predictions are not 0/1 from a classifier.predict() (instead of predict_proba() or decision_function())
