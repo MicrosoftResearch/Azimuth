@@ -498,7 +498,6 @@ def ndcg_at_k_swap_perm_test(preds1, preds2, true_labels, nperm, method, k, norm
                         
         return pval, real_ndcg_diff, perm_ndcg_diff, ndcg1, ndcg2
 
-
 if __name__ == "__main__":
     import cPickle as pickle
     import matplotlib.pyplot as plt
@@ -508,7 +507,7 @@ if __name__ == "__main__":
     simulated_data = True
     permute_real_data = True
         
-    T = 10000
+    T = 1000
     allp = np.nan*np.ones(T)
 
     nperm = 100
@@ -516,8 +515,9 @@ if __name__ == "__main__":
     
     #theta_range = np.logspace(np.log10(0.01), np.log10(1.0), 3)  # Nicolo uses 10, so I grab the extremes and middle
     #theta_range = np.array([0.01])
-    weights = np.logspace(np.log10(0.0001), np.log10(10), 3); 
+    #weights = np.logspace(np.log10(0.0001), np.log10(10), 3); 
     #weights = np.array([100.0])
+    weights = np.array([0.001])
     theta_range = weights# just to make life easier
 
     
@@ -558,12 +558,15 @@ if __name__ == "__main__":
         for i, w in enumerate(weights):
             weights_array = truth.copy()
             weights_array += w
-            corr0 = elevation.metrics.spearman_weighted(truth, pred1, w=weights_array)
-            corr1 = elevation.metrics.spearman_weighted(truth, pred2, w=weights_array)
-            corr01 = elevation.metrics.spearman_weighted(pred1, pred2, w=weights_array)
-            n0 = len(truth)
-        
-            t2, pvaltmp = corrstats.dependent_corr(corr0, corr1, corr01, n0, twotailed=True, method="steiger")
+
+            #corr0 = elevation.metrics.spearman_weighted(truth, pred1, w=weights_array)
+            #corr1 = elevation.metrics.spearman_weighted(truth, pred2, w=weights_array)
+            #corr01 = elevation.metrics.spearman_weighted(pred1, pred2, w=weights_array)
+            #n0 = len(truth)        
+            #t2, pvaltmp = corrstats.dependent_corr(corr0, corr1, corr01, n0, twotailed=True, method="steiger")
+
+            pvaltmp, real_corr_diff, perm_corr_diff, corr1, corr2 = elevation.spearman_weighted_swap_perm_test(pred1, pred2, truth, nperm, weights_array)
+                                                        
             allp[i, t] = pvaltmp
             t1 = time.time()
 

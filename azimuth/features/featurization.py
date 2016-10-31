@@ -138,8 +138,8 @@ def NGGX_interaction_feature(data, pam_audit=True):
     for seq in sequence:
         if pam_audit and seq[25:27] != "GG":
             raise Exception("expected GG but found %s" % seq[25:27])
-        NX = seq[24]+seq[27]
-        NX_onehot = nucleotide_features(NX,order=2, feature_type='pos_dependent', max_index_to_use=2, prefix="NGGX")
+        NX = seq[24]+seq[27]        
+        NX_onehot = nucleotide_features(NX,order=2, feature_type='pos_dependent', max_index_to_use=2, prefix="NGGX")        
         # NX_onehot[:] = np.random.rand(NX_onehot.shape[0]) ##TESTING RANDOM FEATURE
         feat_NX = pandas.concat([feat_NX, NX_onehot], axis=1)
     return feat_NX.T
@@ -383,6 +383,11 @@ def Tm_feature(data, pam_audit=True, learn_options=None):
         featarray[i,2] = Tm.Tm_staluc(seq[segments[1][0]:segments[1][1]], rna=rna)   #8-mer
         featarray[i,3] = Tm.Tm_staluc(seq[segments[2][0]:segments[2][1]], rna=rna)      #5-mer
 
+        #print "CRISPR"
+        #for d in range(4):
+        #    print featarray[i,d]
+        #import ipdb; ipdb.set_trace()
+    
 
     feat = pandas.DataFrame(featarray, index=data.index, columns=["Tm global_%s" % rna, "5mer_end_%s" %rna, "8mer_middle_%s" %rna, "5mer_start_%s" %rna])
 
@@ -486,7 +491,7 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
             return res
 
     res = pandas.Series(features_pos_dependent, index=index_dependent)
-    assert not np.any(np.isnan(res.values))
+    assert not np.any(np.isnan(res.values))    
     return res
 
 def nucleotide_features_dictionary(prefix=''):

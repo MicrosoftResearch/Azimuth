@@ -21,6 +21,8 @@ To view all the official releases of the Azimuth package, click on the "releases
 
 #### Installation (python package)
 
+Before installing Azimuth, we recommend downloading and installing [Anaconda](https://www.continuum.io/downloads).
+
 Azimuth is available from the python package index. From the command prompt, type:
 
 ```shell

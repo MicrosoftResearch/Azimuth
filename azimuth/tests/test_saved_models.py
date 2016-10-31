@@ -16,7 +16,7 @@ class SavedModelTests(unittest.TestCase):
 
             message =  "\n\n\n"
             message += "WARNING!!! The predictions don't match\n"
-            message +=  "Full model prediction: %.4f  \t  Correct prediction: %.4f\n" % (d[3], prediction_full)
-            message +=  "No-pos model prediction: %.4f  \t  Correct prediction: %.4f\n" % (d[4], prediction_nopos)
+            message +=  "Full model prediction: %.4f  \t  Correct prediction: %.4f\n" % (prediction_full, d[3])
+            message +=  "No-pos model prediction: %.4f  \t  Correct prediction: %.4f\n" % (prediction_nopos, d[4])
 
             self.assertTrue(np.allclose([prediction_full, prediction_nopos], [d[3], d[4]], atol=1e-3), msg=message)
