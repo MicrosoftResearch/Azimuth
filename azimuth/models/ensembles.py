@@ -30,14 +30,14 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
                                                    n_estimators=learn_options['adaboost_n_estimators'],
                                                    alpha=learn_options['adaboost_alpha'],
                                                    subsample=1.0, min_samples_split=2, min_samples_leaf=1,                                    max_depth=learn_options['adaboost_max_depth'],
-                                                   init=None, random_state=None, max_features=None,
-                                                   verbose=0, max_leaf_nodes=None, warm_start=False)
+                                                   init=None,  max_features=None,
+                                                   verbose=0, max_leaf_nodes=None, warm_start=False, random_state=learn_options['seed'])
             else:
                 clf = en.GradientBoostingClassifier(learning_rate=learn_options['adaboost_learning_rate'],
                                                    n_estimators=learn_options['adaboost_n_estimators'],
                                                    subsample=1.0, min_samples_split=2, min_samples_leaf=1,                                    max_depth=learn_options['adaboost_max_depth'],
-                                                   init=None, random_state=None, max_features=None,
-                                                   verbose=0, max_leaf_nodes=None, warm_start=False)
+                                                   init=None, max_features=None,
+                                                   verbose=0, max_leaf_nodes=None, warm_start=False, random_state=learn_options['seed'])
 
             clf.fit(X[train], y[train].flatten())
             y_pred = clf.predict(X[test])[:, None]
@@ -55,7 +55,7 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
                     # n_folds = len(np.unique(gene_classes))
                     cv = sklearn.cross_validation.KFold(y_all['Target gene'].values[train].shape[0], n_folds=20, shuffle=True)
                     est = en.GradientBoostingRegressor(n_estimators=1000, learning_rate=params['learning_rate'], max_depth=params['max_depth'],
-                                                       min_samples_leaf=params['min_samples_leaf'], max_features=params['max_features'])
+                                                       min_samples_leaf=params['min_samples_leaf'], max_features=params['max_features'], random_state=learn_options['seed'])
                     scorer = cross_val_score(est, X[train], y[train].flatten(), cv=cv, n_jobs=20)
                     return np.median(scorer)
                 space = {
@@ -70,7 +70,7 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
                                                    learning_rate=best['learning_rate'],
                                                    max_depth=best['max_depth'],
                                                    min_samples_leaf=best['min_samples_leaf'],
-                                                   max_features=best['max_features'])
+                                                   max_features=best['max_features'], random_state=learn_options['seed'])
 
                 clf.fit(X[train], y[train].flatten())
             elif learn_options["algorithm_hyperparam_search"]=="grid":
@@ -98,7 +98,7 @@ def adaboost_on_fold(feature_sets, train, test, y, y_all, X, dim, dimsum, learn_
                  # cv = sklearn.cross_validation.StratifiedKFold(gene_classes, n_folds=n_folds, shuffle=True)
                  cv = sklearn.cross_validation.KFold(X[train].shape[0], n_folds=n_folds, shuffle=True)
 
-                 est = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'])#, n_estimators=learn_options['adaboost_n_estimators'])
+                 est = en.GradientBoostingRegressor(loss=learn_options['adaboost_loss'], random_state=learn_options['seed'])#, n_estimators=learn_options['adaboost_n_estimators'])
                  clf = GridSearchCV(est, param_grid, n_jobs=n_jobs, verbose=1, cv=cv, scoring=spearman_scoring, iid=False)
                  clf.fit(X[train], y[train].flatten())
                  print clf.best_params_
