@@ -18,7 +18,7 @@ before_install:
   - conda info -a
 
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib nose sphinx pip nose cython pandas scikit-learn=0.16.1 biopython
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib nose sphinx pip nose cython pandas scikit-learn=0.17.1 biopython
   - pip install . 
 
 # command to run tests, e.g. python setup.py test
