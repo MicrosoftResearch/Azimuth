@@ -473,8 +473,8 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
         assert index_independent[alphabet.index(nucl)] == '%s%s' % (prefix, nucl)
 
 
-    index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
-    index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
+    #index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
+    #index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
 
 
     if np.any(np.isnan(features_pos_dependent)):
