@@ -455,8 +455,6 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
 
     index_dependent = []
     index_independent = []
-    # index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
-    #index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
 
     for position in range(0, len(s)-order+1, 1):
         for l in alphabet:
@@ -473,6 +471,10 @@ def nucleotide_features(s, order, max_index_to_use, prefix="", feature_type='all
         # this is to check that the labels in the pd df actually match the nucl and position
         assert index_dependent[alphabet.index(nucl) + (position*len(alphabet))] == '%s%s_%d' % (prefix, nucl, position)
         assert index_independent[alphabet.index(nucl)] == '%s%s' % (prefix, nucl)
+
+
+    index_independent = ['%s_pi.Order%d_P%d' % (prefix, order,i) for i in range(len(features_pos_independent))]
+    index_dependent = ['%s_pd.Order%d_P%d' % (prefix, order, i) for i in range(len(features_pos_dependent))]
 
 
     if np.any(np.isnan(features_pos_dependent)):
