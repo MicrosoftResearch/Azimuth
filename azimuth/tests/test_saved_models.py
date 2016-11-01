@@ -2,21 +2,18 @@ import azimuth
 import azimuth.model_comparison
 import numpy as np
 import unittest
+import pandas
 
 class SavedModelTests(unittest.TestCase):
+    """
+    This unit test checks that the predictions for 1000 guides match the predictions we expected in Nov 2016.
+    This unit test can fail due to randomness in the model (e.g. random seed, feature reordering).
+    """
+
     def test_predictions(self):
+        df = pandas.read_csv('1000guides.csv', index_col=0)
+        predictions = azimuth.model_comparison.predict(np.array(df['guide'].values), None, None)
+        self.assertTrue(np.allclose(predictions, df['Stable prediction'].values, atol=1e-3))
 
-        data = [['TGGAGGCTGCTTTACCCGCTGTGGGGGCGC', 254, 87, 0.5335, 0.5909],
-                ['CGTCTCCGGGTTGGCCTTCCACTGGGGCAG', 216, 74, 0.6783, 0.6632],
-                ['CCCTCAGCATCCTTCGGAAAGCTCTGGACA', 80, 27, 0.4898, 0.4461]]
-
-        for d in data:
-            prediction_full = azimuth.model_comparison.predict(np.array([d[0]]), np.array([d[1]]), np.array([d[2]]))[0]
-            prediction_nopos = azimuth.model_comparison.predict(np.array([d[0]]), None, None)[0]
-
-            message =  "\n\n\n"
-            message += "WARNING!!! The predictions don't match\n"
-            message +=  "Full model prediction: %.4f  \t  Correct prediction: %.4f\n" % (prediction_full, d[3])
-            message +=  "No-pos model prediction: %.4f  \t  Correct prediction: %.4f\n" % (prediction_nopos, d[4])
-
-            self.assertTrue(np.allclose([prediction_full, prediction_nopos], [d[3], d[4]], atol=1e-3), msg=message)
+if __name__ == '__main__':
+    unittest.main()
