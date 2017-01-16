@@ -47,10 +47,32 @@ From python, you can get predictions from our model by running:
 import azimuth.model_comparison
 
 azimuth.model_comparison.predict(GUIDE, CUT_POSITION, PERCENT_PEPTIDE)[0]
-
 ```
 where GUIDE, PERCENT_PEPTIDE and CUT_POSITION are numpy arrays.
- 
+
+#### Usage Example
+
+```python
+import azimuth.model_comparison
+import numpy as np
+
+sequences = np.array(['ACAGCTGATCTCCAGATATGACCATGGGTT', 'CAGCTGATCTCCAGATATGACCATGGGTTT', 'CCAGAAGTTTGAGCCACAAACCCATGGTCA'])
+amino_acid_cut_positions = np.array([2, 2, 4])
+percent_peptides = np.array([0.18, 0.18, 0.35])
+predictions = azimuth.model_comparison.predict(sequences, amino_acid_cut_positions, percent_peptides)
+
+for i, prediction in enumerate(predictions):
+    print sequences[i], prediction
+```
+
+Output:
+```
+No model file specified, using V3_model_full
+ACAGCTGATCTCCAGATATGACCATGGGTT 0.672298196907
+CAGCTGATCTCCAGATATGACCATGGGTTT 0.687944237021
+CCAGAAGTTTGAGCCACAAACCCATGGTCA 0.659245390401
+```
+
 #### Generating new model .pickle files
 
 Sometimes the pre-computed .pickle files in the saved_models directory are incompatible with different versions of scikitlearn. You can re-train the files saved_models/V3_model_full.pickle and saved_models/V3_model_nopos.pickle by running the command python model_comparison.py (which will overwrite the saved models). You can check that the resulting models match the models we precomputed by running python test_saved_models.py within the directory tests.
