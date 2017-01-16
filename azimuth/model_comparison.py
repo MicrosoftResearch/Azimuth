@@ -504,10 +504,19 @@ def save_final_model_V3(filename=None, include_position=True, learn_options=None
     return model
 
 
-def predict(seq, aa_cut=-1, percent_peptide=-1, model=None, model_file=None, pam_audit=True, length_audit=False, learn_options_override=None):
+def predict(seq, aa_cut=None, percent_peptide=None, model=None, model_file=None, pam_audit=True, length_audit=False, learn_options_override=None):
     """
-    if pam_audit==False, then it will not check for GG in the expected position
-    this is useful if predicting on PAM mismatches, such as with off-target
+    Args:
+        seq: numpy array of 30 nt sequences.
+        aa_cut: numpy array of amino acid cut positions (optional).
+        percent_peptide: numpy array of percent peptide (optional).
+        model: model instance to use for prediction (optional).
+        model_file: file name of pickled model to use for prediction (optional).
+        pam_audit: check PAM of each sequence.
+        length_audit: check length of each sequence.
+        learn_options_override: a dictionary indicating which learn_options to override (optional).
+
+    Returns: a numpy array of predictions.
     """
     # assert not (model is None and model_file is None), "you have to specify either a model or a model_file"
     assert isinstance(seq, (np.ndarray)), "Please ensure seq is a numpy array"
