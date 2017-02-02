@@ -115,12 +115,8 @@ def get_train_test(test_gene, y_all, train_genes=None):
     else:
         train = not_test
     #y_all['test'] as to do with extra pairs in V2
-    if 'test' in y_all.columns.names:
-        test = (y_all.index.get_level_values('Target gene').values== test_gene) * (y_all['test'].values == 1.)
-    elif test_gene == 'dummy':
+    if test_gene == 'dummy':
         test = train
-    elif test is None:
-         test = train
     else:
          test = (y_all.index.get_level_values('Target gene').values== test_gene)
 
