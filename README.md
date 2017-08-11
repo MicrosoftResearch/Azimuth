@@ -73,7 +73,7 @@ CAGCTGATCTCCAGATATGACCATGGGTTT 0.687944237021
 CCAGAAGTTTGAGCCACAAACCCATGGTCA 0.659245390401
 ```
 
-### Note about Azimuth scores
+#### Note about Azimuth scores
 
 Although the data used for training were in the range 0.0 to 1.0, the predictions made by the final model are not explicitly normalized, so it is possible for Azimuth to make predictions outside of this range. We expect this to be somewhat rare, and it is reasonable to set these values to the closest part of the range \[0.0, 1.0\] (i.e. negative values to 0 and values greater than 1 to 1.0) if it is easier for your purposes.
 
