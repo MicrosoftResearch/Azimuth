@@ -50,6 +50,9 @@ azimuth.model_comparison.predict(GUIDE, CUT_POSITION, PERCENT_PEPTIDE)[0]
 ```
 where GUIDE, PERCENT_PEPTIDE and CUT_POSITION are numpy arrays.
 
+**Note:** if CUT_POSITION and PERCENT_PEPTIDE are not provided or provided as `None`, a
+separate model will be used that does not consider protein target site information.
+
 #### Usage Example
 
 ```python
