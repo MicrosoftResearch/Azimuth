@@ -37,7 +37,7 @@ nosetests
 ```
 If these pass, you will see "OK" as the last printout.
 
-**If you prefer not to install python packages or download any code, you can use our model as a web service.** Instructions on how to do so are [HERE](http://research.microsoft.com/en-us/projects/crispr/)
+**If you prefer not to install python packages or download any code, you can use our model as a web service.** Instructions on how to do so are [HERE](https://www.microsoft.com/en-us/research/project/crispr/)
 
 #### Getting started
 
